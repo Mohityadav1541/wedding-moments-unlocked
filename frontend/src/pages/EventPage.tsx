@@ -52,14 +52,21 @@ const EventPage = () => {
 
   // Helper to convert base64/dataURL to Blob for upload
   const dataURItoBlob = (dataURI: string) => {
-    const byteString = atob(dataURI.split(',')[1]);
-    const mimeString = dataURI.split(',')[0].split(':')[1].split(';')[0];
-    const ab = new ArrayBuffer(byteString.length);
-    const ia = new Uint8Array(ab);
-    for (let i = 0; i < byteString.length; i++) {
-      ia[i] = byteString.charCodeAt(i);
+    try {
+      if (!dataURI || !dataURI.includes(',')) return null;
+
+      const byteString = atob(dataURI.split(',')[1]);
+      const mimeString = dataURI.split(',')[0].split(':')[1].split(';')[0];
+      const ab = new ArrayBuffer(byteString.length);
+      const ia = new Uint8Array(ab);
+      for (let i = 0; i < byteString.length; i++) {
+        ia[i] = byteString.charCodeAt(i);
+      }
+      return new Blob([ab], { type: mimeString });
+    } catch (e) {
+      console.error("Data URI conversion failed", e);
+      return null; // Return null on failure
     }
-    return new Blob([ab], { type: mimeString });
   };
 
   const handleFindPhotos = async () => {
@@ -70,17 +77,31 @@ const EventPage = () => {
     try {
       const formData = new FormData();
       const blob = dataURItoBlob(selfieUrl);
-      formData.append('image', blob, 'selfie.png');
+
+      if (!blob) {
+        toast.error("Invalid image data. Please retake the selfie.");
+        setIsProcessing(false);
+        return;
+      }
+
+      formData.append('image', blob, 'selfie.jpg');
       formData.append('eventId', event._id);
 
       const { data } = await api.post('/photos/search', formData);
 
       // Data should be array of photos with { url, downloadUrl }
       setMatchedPhotos(data);
+      if (data.length === 0) {
+        toast.info("No matching photos found with high confidence.");
+      }
       setStep("results");
-    } catch (error) {
+    } catch (error: any) {
       console.error("AI Search Failed:", error);
-      toast.error("Failed to find photos. Please try again.");
+      if (error.response?.status === 500) {
+        toast.error("Server error. Please try again in 1 minute.");
+      } else {
+        toast.error("Failed to find photos. Please try again.");
+      }
     } finally {
       setIsProcessing(false);
     }

@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Camera, Upload, RefreshCw, Check } from "lucide-react";
 
@@ -13,16 +13,31 @@ const SelfieUpload = ({ onCapture, selfieUrl }: SelfieUploadProps) => {
   const [isDragging, setIsDragging] = useState(false);
   const [stream, setStream] = useState<MediaStream | null>(null);
 
+  // Fix: Attach stream to video element whenever stream state changes
+  useEffect(() => {
+    if (stream && videoRef.current) {
+      videoRef.current.srcObject = stream;
+    }
+  }, [stream]);
+
   const startCamera = async () => {
     try {
-      const mediaStream = await navigator.mediaDevices.getUserMedia({ video: true });
+      // Constraints for mobile facing camera check
+      const constraints = {
+        video: {
+          facingMode: "user",
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        }
+      };
+
+      const mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
       setStream(mediaStream);
-      if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream;
-      }
+      // Video srcObject set by effect
     } catch (err) {
       console.error("Error accessing camera:", err);
-      alert("Could not access camera. Please allow camera permissions.");
+      // Fallback for permissions or device issues
+      alert("Could not access camera. Please check permissions.");
     }
   };
 
@@ -36,6 +51,7 @@ const SelfieUpload = ({ onCapture, selfieUrl }: SelfieUploadProps) => {
   const capturePhoto = () => {
     if (videoRef.current) {
       const canvas = document.createElement("canvas");
+      // Use actual video dimensions
       canvas.width = videoRef.current.videoWidth;
       canvas.height = videoRef.current.videoHeight;
       const ctx = canvas.getContext("2d");
@@ -45,35 +61,47 @@ const SelfieUpload = ({ onCapture, selfieUrl }: SelfieUploadProps) => {
         ctx.scale(-1, 1);
         ctx.drawImage(videoRef.current, 0, 0);
 
-        const imageUrl = canvas.toDataURL("image/png");
-        onCapture(imageUrl);
-        stopCamera();
+        try {
+          const imageUrl = canvas.toDataURL("image/jpeg", 0.8);
+          if (imageUrl.length > 100) {
+            onCapture(imageUrl);
+            stopCamera();
+          } else {
+            alert("Camera capture failed. Please try again.");
+          }
+        } catch (e) {
+          console.error("Canvas error", e);
+        }
       }
+    }
+  };
+
+  const processFile = (file: File) => {
+    if (file && file.type.startsWith("image/")) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const result = event.target?.result;
+        if (typeof result === "string" && result.startsWith("data:image")) {
+          onCapture(result);
+        } else {
+          alert("Invalid image file. Please try another.");
+        }
+      };
+      reader.onerror = () => alert("Error reading file");
+      reader.readAsDataURL(file);
     }
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        onCapture(event.target?.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
+    if (file) processFile(file);
   };
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
     const file = e.dataTransfer.files?.[0];
-    if (file && file.type.startsWith("image/")) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        onCapture(event.target?.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
+    if (file) processFile(file);
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -124,6 +152,7 @@ const SelfieUpload = ({ onCapture, selfieUrl }: SelfieUploadProps) => {
               ref={videoRef}
               autoPlay
               playsInline
+              muted
               className="w-full h-auto object-cover transform -scale-x-100"
               style={{ maxHeight: '400px' }}
             />
