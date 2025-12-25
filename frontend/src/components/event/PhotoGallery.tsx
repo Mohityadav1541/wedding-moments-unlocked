@@ -5,8 +5,10 @@ import { Download, Lock, ShoppingCart, Check, X } from "lucide-react";
 import { toast } from "sonner";
 
 interface Photo {
-  id: string;
+  _id: string; // Backend ID
+  id?: string; // Legacy/Mock ID
   url: string;
+  downloadUrl?: string; // Watermarked URL
   confidence: number;
 }
 
@@ -35,16 +37,48 @@ const PhotoGallery = ({ photos, photoPrice, photographerName }: PhotoGalleryProp
     if (selectedPhotos.size === photos.length) {
       setSelectedPhotos(new Set());
     } else {
-      setSelectedPhotos(new Set(photos.map(p => p.id)));
+      setSelectedPhotos(new Set(photos.map(p => p._id || p.id || "")));
     }
   };
 
-  const handleDownloadFree = () => {
+  const handleDownloadFree = async () => {
     setIsDownloading(true);
-    setTimeout(() => {
-      setIsDownloading(false);
-      toast.success(`${selectedPhotos.size} photos downloaded with watermark!`);
-    }, 1500);
+
+    // Find selected photo objects
+    const photosToDownload = photos.filter(p => selectedPhotos.has(p._id || p.id || ""));
+
+    let successCount = 0;
+    for (const photo of photosToDownload) {
+      if (photo.downloadUrl) {
+        try {
+          // Fetch blob to avoid browser opening in new tab
+          const response = await fetch(photo.downloadUrl);
+          const blob = await response.blob();
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.style.display = 'none';
+          a.href = url;
+          // Suggest filename
+          a.download = `photo-${photo._id || Date.now()}.jpg`;
+          document.body.appendChild(a);
+          a.click();
+          window.URL.revokeObjectURL(url);
+          document.body.removeChild(a);
+          successCount++;
+        } catch (err) {
+          console.error("Download failed", err);
+          // Fallback to opening in new tab
+          window.open(photo.downloadUrl, '_blank');
+        }
+      }
+    }
+
+    setIsDownloading(false);
+    if (successCount > 0) {
+      toast.success(`${successCount} photos downloaded!`);
+    } else {
+      toast.error("No photos available for download.");
+    }
   };
 
   const handleBuyPremium = () => {
@@ -59,8 +93,8 @@ const PhotoGallery = ({ photos, photoPrice, photographerName }: PhotoGalleryProp
       <div className="bg-card rounded-xl p-4 shadow-card border border-border/50 mb-6 sticky top-20 z-40">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               size="sm"
               onClick={selectAll}
             >
@@ -70,12 +104,12 @@ const PhotoGallery = ({ photos, photoPrice, photographerName }: PhotoGalleryProp
               {selectedPhotos.size} of {photos.length} selected
             </span>
           </div>
-          
+
           {selectedPhotos.size > 0 && (
             <div className="flex gap-3">
               {isFree ? (
-                <Button 
-                  variant="sage" 
+                <Button
+                  variant="sage"
                   onClick={handleDownloadFree}
                   disabled={isDownloading}
                   className="gap-2"
@@ -100,57 +134,58 @@ const PhotoGallery = ({ photos, photoPrice, photographerName }: PhotoGalleryProp
 
       {/* Photo Grid */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-        {photos.map((photo) => (
-          <div 
-            key={photo.id}
-            className={`relative group rounded-xl overflow-hidden shadow-card border-2 transition-all cursor-pointer ${
-              selectedPhotos.has(photo.id) 
-                ? "border-primary ring-2 ring-primary/30" 
+        {photos.map((photo) => {
+          const id = photo._id || photo.id || "unknown";
+          return (
+            <div
+              key={id}
+              className={`relative group rounded-xl overflow-hidden shadow-card border-2 transition-all cursor-pointer ${selectedPhotos.has(id)
+                ? "border-primary ring-2 ring-primary/30"
                 : "border-transparent hover:border-primary/50"
-            }`}
-          >
-            {/* Photo */}
-            <div 
-              className="aspect-square"
-              onClick={() => setPreviewPhoto(photo)}
+                }`}
             >
-              <img 
-                src={photo.url} 
-                alt="Wedding photo"
-                className="w-full h-full object-cover"
-              />
-              
-              {/* Watermark Overlay */}
-              <div className="watermark-overlay">
-                <div className="watermark-text">
-                  {photographerName}
+              {/* Photo */}
+              <div
+                className="aspect-square"
+                onClick={() => setPreviewPhoto(photo)}
+              >
+                <img
+                  src={photo.url}
+                  alt="Wedding photo"
+                  className="w-full h-full object-cover"
+                />
+
+                {/* Watermark Overlay */}
+                <div className="watermark-overlay">
+                  <div className="watermark-text">
+                    {photographerName}
+                  </div>
+                </div>
+
+                {/* Confidence Badge */}
+                <div className="absolute top-2 left-2 bg-background/80 backdrop-blur-sm px-2 py-1 rounded-full">
+                  <span className="font-body text-xs font-medium text-foreground">
+                    {photo.confidence}% match
+                  </span>
                 </div>
               </div>
 
-              {/* Confidence Badge */}
-              <div className="absolute top-2 left-2 bg-background/80 backdrop-blur-sm px-2 py-1 rounded-full">
-                <span className="font-body text-xs font-medium text-foreground">
-                  {photo.confidence}% match
-                </span>
-              </div>
-            </div>
-
-            {/* Select Checkbox */}
-            <button
-              className={`absolute top-2 right-2 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
-                selectedPhotos.has(photo.id)
+              {/* Select Checkbox */}
+              <button
+                className={`absolute top-2 right-2 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${selectedPhotos.has(id)
                   ? "bg-primary border-primary text-primary-foreground"
                   : "bg-background/80 border-border hover:border-primary"
-              }`}
-              onClick={(e) => {
-                e.stopPropagation();
-                toggleSelect(photo.id);
-              }}
-            >
-              {selectedPhotos.has(photo.id) && <Check className="h-4 w-4" />}
-            </button>
-          </div>
-        ))}
+                  }`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleSelect(id);
+                }}
+              >
+                {selectedPhotos.has(id) && <Check className="h-4 w-4" />}
+              </button>
+            </div>
+          );
+        })}
       </div>
 
       {/* Preview Dialog */}
@@ -159,8 +194,8 @@ const PhotoGallery = ({ photos, photoPrice, photographerName }: PhotoGalleryProp
           {previewPhoto && (
             <>
               <div className="relative aspect-[4/3]">
-                <img 
-                  src={previewPhoto.url} 
+                <img
+                  src={previewPhoto.url}
                   alt="Wedding photo preview"
                   className="w-full h-full object-contain bg-muted"
                 />
@@ -176,23 +211,23 @@ const PhotoGallery = ({ photos, photoPrice, photographerName }: PhotoGalleryProp
                   {previewPhoto.confidence}% match confidence
                 </span>
                 <div className="flex gap-2">
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     size="sm"
                     onClick={() => setPreviewPhoto(null)}
                   >
                     Close
                   </Button>
-                  <Button 
-                    variant="rose" 
+                  <Button
+                    variant="rose"
                     size="sm"
                     onClick={() => {
-                      toggleSelect(previewPhoto.id);
+                      toggleSelect(previewPhoto._id || previewPhoto.id || "");
                       setPreviewPhoto(null);
                     }}
                     className="gap-2"
                   >
-                    {selectedPhotos.has(previewPhoto.id) ? (
+                    {selectedPhotos.has(previewPhoto._id || previewPhoto.id || "") ? (
                       <>
                         <X className="h-4 w-4" />
                         Remove from Selection
