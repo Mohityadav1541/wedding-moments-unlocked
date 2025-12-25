@@ -3,6 +3,7 @@ import {
     createEvent,
     getEvents,
     getEventById,
+    getPublicEventById,
     markEventPaid,
     confirmEventPayment,
     getRevenueStats,
@@ -15,8 +16,10 @@ const router = express.Router();
 
 router.route('/').post(protect, admin, createEvent).get(protect, getEvents);
 router.route('/revenue').get(protect, superAdmin, getRevenueStats);
+
+router.route('/public/:id').get(getPublicEventById); // Public access
 router.route('/:id').get(protect, getEventById).delete(protect, superAdmin, deleteEvent);
 router.route('/:id/pay').put(protect, admin, upload.single('screenshot'), markEventPaid);
-router.route('/:id/confirm').put(protect, confirmEventPayment); // Only superadmin should access, but protect checks login
+router.route('/:id/confirm').put(protect, confirmEventPayment);
 
 export default router;

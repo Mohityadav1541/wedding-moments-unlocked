@@ -141,29 +141,24 @@ export const getRevenueStats = async (req, res) => {
 };
 
 // @desc    Get event by ID
-// @route   GET /api/events/:id
+// @route   GET /api/events/:id (PRIVATE)
 // @access  Private/Admin
 export const getEventById = async (req, res) => {
     try {
-        console.log("getEventById request ID:", req.params.id);
         const event = await Event.findById(req.params.id).populate('user', 'name email');
-        console.log("getEventById found:", event ? "Yes" : "No");
 
         if (event) {
-            // Check ownership (handle populated user object or direct ID)
+            // Check ownership
             let eventUserId = null;
             if (event.user) {
                 eventUserId = event.user._id ? event.user._id.toString() : event.user.toString();
             }
 
-            // Authorization: Allow Super Admin OR Owner (if owner exists)
-            // If owner is deleted (null), only Super Admin can see it.
             if (req.user.role !== 'superadmin') {
                 if (!eventUserId || eventUserId !== req.user._id.toString()) {
                     return res.status(401).json({ message: 'Not authorized' });
                 }
             }
-
             res.json(event);
         } else {
             res.status(404).json({ message: 'Event not found' });
@@ -173,6 +168,37 @@ export const getEventById = async (req, res) => {
         res.status(500).json({ message: 'Server Error' });
     }
 };
+
+// @desc    Get public event details
+// @route   GET /api/events/public/:id (PUBLIC)
+// @access  Public
+export const getPublicEventById = async (req, res) => {
+    try {
+        const event = await Event.findById(req.params.id).populate('user', 'name');
+
+        if (event) {
+            // Return only safe fields for guests
+            const publicData = {
+                _id: event._id,
+                name: event.name,
+                date: event.date,
+                location: event.location,
+                coverImage: event.coverImage,
+                package: event.package,
+                price: event.price,
+                user: { name: event.user?.name },
+                photos: []
+            };
+            res.json(publicData);
+        } else {
+            res.status(404).json({ message: 'Event not found' });
+        }
+    } catch (error) {
+        console.error("Get Public Event Error:", error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+};
+
 
 // @desc    Delete event and all its photos
 // @route   DELETE /api/events/:id
@@ -220,4 +246,3 @@ export const deleteEvent = async (req, res) => {
         res.status(500).json({ message: 'Server Error' });
     }
 };
-

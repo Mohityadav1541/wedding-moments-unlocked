@@ -35,8 +35,8 @@ const EventPage = () => {
 
   const fetchEventDetails = async () => {
     try {
-      // In a real app, this endpoint should be public or have specific access
-      const { data } = await api.get(`/events/${eventId}`);
+      // Use the public endpoint to avoid authentication requirement
+      const { data } = await api.get(`/events/public/${eventId}`);
       setEvent(data);
     } catch (error) {
       console.error("Error fetching event:", error);
