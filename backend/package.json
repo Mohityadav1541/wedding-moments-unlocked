@@ -15,6 +15,7 @@
   "license": "ISC",
   "dependencies": {
     "@vladmandic/face-api": "^1.7.15",
+    "@tensorflow/tfjs-node": "^4.20.0",
     "axios": "^1.13.2",
     "bcryptjs": "^3.0.3",
     "canvas": "^3.2.0",
