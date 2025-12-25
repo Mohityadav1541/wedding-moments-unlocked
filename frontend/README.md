@@ -55,6 +55,8 @@ npm run dev
 This project is built with:
 
 - Vite
+# AI Photo Scan - Frontend
+This is the frontend React application.
 - TypeScript
 - React
 - shadcn-ui
