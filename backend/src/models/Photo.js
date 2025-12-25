@@ -14,9 +14,10 @@ const photoSchema = new mongoose.Schema({
         type: String, // Cloudinary ID or similar
         required: false,
     },
-    faces: [{ // Array of embeddings or face IDs if implementing face rec
-        type: String
-    }]
+    faceDescriptor: {
+        type: [Number], // 128-float array for face embedding
+        default: []
+    }
 }, {
     timestamps: true,
 });

@@ -9,7 +9,48 @@ interface SelfieUploadProps {
 
 const SelfieUpload = ({ onCapture, selfieUrl }: SelfieUploadProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [stream, setStream] = useState<MediaStream | null>(null);
+
+  const startCamera = async () => {
+    try {
+      const mediaStream = await navigator.mediaDevices.getUserMedia({ video: true });
+      setStream(mediaStream);
+      if (videoRef.current) {
+        videoRef.current.srcObject = mediaStream;
+      }
+    } catch (err) {
+      console.error("Error accessing camera:", err);
+      alert("Could not access camera. Please allow camera permissions.");
+    }
+  };
+
+  const stopCamera = () => {
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+      setStream(null);
+    }
+  };
+
+  const capturePhoto = () => {
+    if (videoRef.current) {
+      const canvas = document.createElement("canvas");
+      canvas.width = videoRef.current.videoWidth;
+      canvas.height = videoRef.current.videoHeight;
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        // Mirror the image to match video preview
+        ctx.translate(canvas.width, 0);
+        ctx.scale(-1, 1);
+        ctx.drawImage(videoRef.current, 0, 0);
+
+        const imageUrl = canvas.toDataURL("image/png");
+        onCapture(imageUrl);
+        stopCamera();
+      }
+    }
+  };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -53,9 +94,9 @@ const SelfieUpload = ({ onCapture, selfieUrl }: SelfieUploadProps) => {
       {selfieUrl ? (
         <div className="space-y-4">
           <div className="relative aspect-square max-w-xs mx-auto rounded-2xl overflow-hidden shadow-elegant">
-            <img 
-              src={selfieUrl} 
-              alt="Your selfie" 
+            <img
+              src={selfieUrl}
+              alt="Your selfie"
               className="w-full h-full object-cover"
             />
             <div className="absolute bottom-3 right-3 bg-sage text-sage-dark p-2 rounded-full">
@@ -63,9 +104,12 @@ const SelfieUpload = ({ onCapture, selfieUrl }: SelfieUploadProps) => {
             </div>
           </div>
           <div className="text-center">
-            <Button 
-              variant="outline" 
-              onClick={() => fileInputRef.current?.click()}
+            <Button
+              variant="outline"
+              onClick={() => {
+                onCapture(""); // Clear photo
+                setStream(null); // Reset stream state if any
+              }}
               className="gap-2"
             >
               <RefreshCw className="h-4 w-4" />
@@ -73,13 +117,30 @@ const SelfieUpload = ({ onCapture, selfieUrl }: SelfieUploadProps) => {
             </Button>
           </div>
         </div>
+      ) : stream ? (
+        <div className="space-y-4 flex flex-col items-center">
+          <div className="relative rounded-2xl overflow-hidden border-2 border-primary shadow-elegant w-full max-w-sm bg-black">
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              className="w-full h-auto object-cover transform -scale-x-100"
+              style={{ maxHeight: '400px' }}
+            />
+          </div>
+          <div className="flex gap-4">
+            <Button variant="destructive" onClick={stopCamera}>Cancel</Button>
+            <Button variant="rose" onClick={capturePhoto} className="gap-2">
+              <Camera className="h-4 w-4" /> Capture
+            </Button>
+          </div>
+        </div>
       ) : (
         <div
-          className={`relative border-2 border-dashed rounded-2xl p-8 md:p-12 text-center transition-all ${
-            isDragging 
-              ? "border-primary bg-primary/5" 
-              : "border-border hover:border-primary/50"
-          }`}
+          className={`relative border-2 border-dashed rounded-2xl p-8 md:p-12 text-center transition-all ${isDragging
+            ? "border-primary bg-primary/5"
+            : "border-border hover:border-primary/50"
+            }`}
           onDrop={handleDrop}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
@@ -94,8 +155,16 @@ const SelfieUpload = ({ onCapture, selfieUrl }: SelfieUploadProps) => {
             or click to browse from your device
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Button 
-              variant="rose" 
+            <Button
+              variant="outline"
+              onClick={startCamera}
+              className="gap-2"
+            >
+              <Camera className="h-4 w-4" />
+              Use Camera
+            </Button>
+            <Button
+              variant="rose"
               onClick={() => fileInputRef.current?.click()}
               className="gap-2"
             >

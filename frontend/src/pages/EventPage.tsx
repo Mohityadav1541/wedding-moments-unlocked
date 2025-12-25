@@ -50,21 +50,40 @@ const EventPage = () => {
     setSelfieUrl(imageUrl);
   };
 
+  // Helper to convert base64/dataURL to Blob for upload
+  const dataURItoBlob = (dataURI: string) => {
+    const byteString = atob(dataURI.split(',')[1]);
+    const mimeString = dataURI.split(',')[0].split(':')[1].split(';')[0];
+    const ab = new ArrayBuffer(byteString.length);
+    const ia = new Uint8Array(ab);
+    for (let i = 0; i < byteString.length; i++) {
+      ia[i] = byteString.charCodeAt(i);
+    }
+    return new Blob([ab], { type: mimeString });
+  };
+
   const handleFindPhotos = async () => {
     if (!selfieUrl || !event) return;
 
     setIsProcessing(true);
-    // Simulate AI processing for now, or perform real match if backend supports it
-    // For now keeping simple simulation to avoid breaking changes in demo flow
-    setTimeout(() => {
-      setMatchedPhotos([
-        // Mock matches for demonstration - in real app would come from backend
-        { id: "1", url: "https://images.unsplash.com/photo-1519741497674-611481863552?w=800", confidence: 98 },
-        { id: "2", url: "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=800", confidence: 95 },
-      ]);
-      setIsProcessing(false);
+
+    try {
+      const formData = new FormData();
+      const blob = dataURItoBlob(selfieUrl);
+      formData.append('image', blob, 'selfie.png');
+      formData.append('eventId', event._id);
+
+      const { data } = await api.post('/photos/search', formData);
+
+      // Data should be array of photos with { url, downloadUrl }
+      setMatchedPhotos(data);
       setStep("results");
-    }, 2500);
+    } catch (error) {
+      console.error("AI Search Failed:", error);
+      toast.error("Failed to find photos. Please try again.");
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   if (loading) {

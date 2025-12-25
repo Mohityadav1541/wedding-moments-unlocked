@@ -14,8 +14,10 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@vladmandic/face-api": "^1.7.15",
     "axios": "^1.13.2",
     "bcryptjs": "^3.0.3",
+    "canvas": "^3.2.0",
     "cloudinary": "^1.41.3",
     "colors": "^1.4.0",
     "cors": "^2.8.5",

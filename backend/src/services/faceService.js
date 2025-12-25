@@ -1,0 +1,60 @@
+import * as faceapi from '@vladmandic/face-api';
+import canvas from 'canvas';
+const { Canvas, Image, ImageData } = canvas;
+
+// Monkey patch face-api to use node-canvas
+faceapi.env.monkeyPatch({ Canvas, Image, ImageData });
+
+let modelsLoaded = false;
+
+// Initialize models
+const loadModels = async () => {
+    if (modelsLoaded) return;
+    try {
+        console.log("Loading FaceAPI models...");
+        // Load from Vlad's public repo to avoid storing large binaries locally
+        const modelUrl = 'https://vladmandic.github.io/face-api/model/';
+
+        await Promise.all([
+            faceapi.nets.ssdMobilenetv1.loadFromUri(modelUrl),
+            faceapi.nets.faceLandmark68Net.loadFromUri(modelUrl),
+            faceapi.nets.faceRecognitionNet.loadFromUri(modelUrl)
+        ]);
+
+        modelsLoaded = true;
+        console.log("FaceAPI models loaded successfully.");
+    } catch (error) {
+        console.error("Failed to load FaceAPI models:", error);
+    }
+};
+
+// Compute descriptor for an image URL or Path
+export const getFaceDescriptor = async (imageUrl) => {
+    try {
+        if (!modelsLoaded) await loadModels();
+
+        // Load image using canvas
+        const img = await canvas.loadImage(imageUrl);
+
+        // Detect face with highest confidence
+        const detection = await faceapi.detectSingleFace(img)
+            .withFaceLandmarks()
+            .withFaceDescriptor();
+
+        if (!detection) {
+            return null; // No face found
+        }
+
+        // Return array of numbers (descriptor)
+        return Array.from(detection.descriptor);
+    } catch (error) {
+        console.error("Error processing face:", error);
+        return null; // Fail gracefully
+    }
+};
+
+// Compare two descriptors (Euclidean distance)
+export const isMatch = (descriptor1, descriptor2, threshold = 0.6) => {
+    const distance = faceapi.euclideanDistance(descriptor1, descriptor2);
+    return distance < threshold;
+};

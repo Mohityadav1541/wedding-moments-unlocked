@@ -1,10 +1,11 @@
 import Photo from '../models/Photo.js';
 import Event from '../models/Event.js';
 import { cloudinary } from '../config/cloudinary.js';
+import { getFaceDescriptor, isMatch } from '../services/faceService.js';
 
 // @desc    Get photos for an event
 // @route   GET /api/photos/:eventId
-// @access  Private/Admin (or Public depending on logic)
+// @access  Private/Admin (Public for guest matching results technically)
 export const getPhotosByEvent = async (req, res) => {
     try {
         const photos = await Photo.find({ event: req.params.eventId });
@@ -21,8 +22,11 @@ export const addPhoto = async (req, res) => {
     const { eventId } = req.body;
     let url = req.body.url;
 
+    // Local file from multer (if used)
     if (req.file) {
-        url = req.file.path.replace(/\\/g, "/"); // Normalize path for Windows
+        // Normalize path and use Cloudinary URL if available in req.file.path
+        // If uploadMiddleware uploads to cloudinary, req.file.path IS the cloudinary URL usually
+        url = req.file.path;
     }
 
     if (!url) {
@@ -30,25 +34,106 @@ export const addPhoto = async (req, res) => {
     }
 
     try {
-        // Check if event exists and user owns it
+        // Check if event exists
         const event = await Event.findById(eventId);
         if (!event) {
             return res.status(404).json({ message: 'Event not found' });
         }
-        if (event.user.toString() !== req.user._id.toString()) {
+        // Authorization check
+        if (event.user.toString() !== req.user._id.toString() && req.user.role !== 'superadmin') {
             return res.status(401).json({ message: 'Not authorized' });
         }
+
+        // --- AI PROCESS START ---
+        // Compute face descriptor
+        // Use the URL directly. FaceAPI will fetch it.
+        // NOTE: For very large images, this might be slow using URL.
+        const descriptor = await getFaceDescriptor(url);
+        // --- AI PROCESS END ---
 
         const photo = new Photo({
             event: eventId,
             url,
+            faceDescriptor: descriptor || [] // Store array or empty
         });
 
         const createdPhoto = await photo.save();
         res.status(201).json(createdPhoto);
     } catch (error) {
         console.error("Add Photo Error:", error);
-        res.status(400).json({ message: 'Invalid data' });
+        res.status(400).json({ message: 'Invalid data or AI processing failed' });
+    }
+};
+
+// @desc    Search photos by face (Selfie)
+// @route   POST /api/photos/search
+// @access  Public
+export const searchPhotos = async (req, res) => {
+    const { eventId } = req.body;
+
+    // Selfie can be a URL (if uploaded to cloudinary first) or a file path (if uploaded locally via multer)
+    // Here we strictly expect 'image' file upload via middleware
+    const selfieUrl = req.file ? req.file.path : null;
+
+    if (!selfieUrl || !eventId) {
+        return res.status(400).json({ message: 'Selfie image and Event ID are required' });
+    }
+
+    try {
+        // 1. Compute descriptor for Selfie
+        const selfieDescriptor = await getFaceDescriptor(selfieUrl);
+
+        if (!selfieDescriptor) {
+            return res.status(200).json({
+                message: 'No face detected in selfie. Please try again with a clear photo.',
+                matches: []
+            });
+        }
+
+        // 2. Fetch all photos for this event that HAVE descriptors
+        // Optimization: We could use MongoDB vector search if available, but for now JS filter is fine for <1000 photos
+        const eventPhotos = await Photo.find({
+            event: eventId,
+            $expr: { $gt: [{ $size: "$faceDescriptor" }, 0] }
+        });
+
+        // 3. Match faces
+        const matches = eventPhotos.filter(photo => {
+            return isMatch(selfieDescriptor, photo.faceDescriptor);
+        });
+
+        // 4. Transform matches for display (Add Watermark logic)
+        // Assuming Cloudinary URLs
+        const results = matches.map(photo => {
+            // Apply generic studio watermark for download
+            // Cloudinary transformation: overlay text "Wedding Moments"
+            // Simple structure: insert transformation string before filename
+            // Example: https://res.cloudinary.com/cloud/image/upload/v1234/folder/file.jpg
+            // Target: https://res.cloudinary.com/cloud/image/upload/l_text:Arial_80_bold:Wedding%20AI,g_south_east,co_white,o_80/v1234/folder/file.jpg
+
+            let downloadUrl = photo.url;
+            if (photo.url.includes('/upload/')) {
+                const parts = photo.url.split('/upload/');
+                const transformation = 'l_text:Arial_60_bold:Wedding%20AI,g_south_east,co_white,o_60';
+                downloadUrl = `${parts[0]}/upload/${transformation}/${parts[1]}`;
+            }
+
+            return {
+                _id: photo._id,
+                url: photo.url, // Preview original (or maybe low res?)
+                downloadUrl,    // Watermarked
+                confidence: 90 // Placeholder or calculate real confidence
+            };
+        });
+
+        res.json(results);
+
+        // Optional: Delete the temp selfie from Cloudinary to save space?
+        // if (req.file.filename) cloudinary.uploader.destroy(req.file.filename);
+
+    } catch (error) {
+        console.error("Search Photos Error:", error);
+        res.status(500).json({ message: 'Server Error during face search' });
     }
 };
 
@@ -60,18 +145,9 @@ export const deletePhoto = async (req, res) => {
         const photo = await Photo.findById(req.params.id);
 
         if (photo) {
-            // Check authorization: User must own the specific EVENT associated with the photo?
-            // Or easier: find event, check event.user == req.user OR req.user.role == superadmin
-            // BUT, Photo model references Event.
-            // Let's assume for now if they can find the photo they can verify ownership via Event populate or separate query.
-
-            // To be safe, verify ownership
             const event = await Event.findById(photo.event);
             if (!event) {
-                // If event doesn't exist, maybe orphan photo, allow superadmin?
-                if (req.user.role !== 'superadmin') {
-                    return res.status(404).json({ message: 'Event not found for this photo' });
-                }
+                if (req.user.role !== 'superadmin') return res.status(404).json({ message: 'Event not found' });
             } else {
                 if (event.user.toString() !== req.user._id.toString() && req.user.role !== 'superadmin') {
                     return res.status(401).json({ message: 'Not authorized' });
@@ -79,25 +155,14 @@ export const deletePhoto = async (req, res) => {
             }
 
             // Remove from Cloudinary
-            if (photo.url) {
+            if (photo.url && photo.url.includes('cloudinary')) {
                 try {
-                    // Extract public_id from URL
-                    // Example: https://res.cloudinary.com/.../wedding-ai/e4a1d...jpg
                     const urlParts = photo.url.split('/');
-                    const filenameWithExt = urlParts[urlParts.length - 1]; // e4a1d...jpg
-                    const folderName = urlParts[urlParts.length - 2]; // wedding-ai
-                    // Use folderName from config or extract from URL? Extracting is safer if we reuse logic.
-                    // Assuming standard Cloudinary URL structure.
-                    // Note: If URL is not Cloudinary (legacy local), skip.
-
-                    if (photo.url.includes('cloudinary')) {
-                        const publicId = `${folderName}/${filenameWithExt.split('.')[0]}`;
-                        await cloudinary.uploader.destroy(publicId);
-                    }
-                } catch (err) {
-                    console.error("Cloudinary Delete Error:", err);
-                    // Continue to delete from DB even if Cloudinary fails (orphan file vs metadata consistency)
-                }
+                    const filenameWithExt = urlParts[urlParts.length - 1];
+                    const folderName = urlParts[urlParts.length - 2];
+                    const publicId = `${folderName}/${filenameWithExt.split('.')[0]}`;
+                    await cloudinary.uploader.destroy(publicId);
+                } catch (err) { }
             }
 
             await photo.deleteOne();
