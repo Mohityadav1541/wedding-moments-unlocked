@@ -125,18 +125,29 @@ const ManageEvent = () => {
                             onChange={async (e) => {
                                 const files = e.target.files;
                                 if (files && files.length > 0) {
-                                    const formData = new FormData();
-                                    formData.append('eventId', event._id);
-                                    formData.append('image', files[0]); // Handle single for now, loop for multiple later
+                                    const totalFiles = files.length;
+                                    let uploadedCount = 0;
+                                    toast.info(`Starting upload of ${totalFiles} photos...`);
 
-                                    try {
-                                        toast.info("Uploading photo...");
-                                        await api.post('/photos', formData);
-                                        toast.success("Photo uploaded successfully!");
-                                    } catch (error) {
-                                        console.error(error);
-                                        toast.error("Failed to upload photo");
+                                    for (let i = 0; i < totalFiles; i++) {
+                                        const formData = new FormData();
+                                        formData.append('eventId', event._id);
+                                        formData.append('image', files[i]);
+
+                                        try {
+                                            await api.post('/photos', formData);
+                                            uploadedCount++;
+                                            if (uploadedCount % 3 === 0) {
+                                                toast.info(`Uploaded ${uploadedCount}/${totalFiles}...`);
+                                            }
+                                        } catch (error) {
+                                            console.error(`Failed to upload file ${i + 1}:`, error);
+                                            toast.error(`Failed to upload image ${i + 1}`);
+                                        }
                                     }
+
+                                    toast.success(`Upload complete! ${uploadedCount}/${totalFiles} photos uploaded.`);
+                                    fetchPhotos();
                                 }
                             }}
                         />
