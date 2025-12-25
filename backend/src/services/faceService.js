@@ -28,7 +28,31 @@ const loadModels = async () => {
     }
 };
 
-// Compute descriptor for an image URL or Path
+// Compute descriptors for ALL faces in an image
+export const getAllFaceDescriptors = async (imageUrl) => {
+    try {
+        if (!modelsLoaded) await loadModels();
+
+        const img = await canvas.loadImage(imageUrl);
+
+        // Detect ALL faces
+        const detections = await faceapi.detectAllFaces(img)
+            .withFaceLandmarks()
+            .withFaceDescriptors();
+
+        if (!detections || detections.length === 0) {
+            return []; // No faces found
+        }
+
+        // Return array of arrays
+        return detections.map(d => Array.from(d.descriptor));
+    } catch (error) {
+        console.error("Error processing faces:", error);
+        return [];
+    }
+};
+
+// Compute descriptor for an image URL or Path (Legacy/Single)
 export const getFaceDescriptor = async (imageUrl) => {
     try {
         if (!modelsLoaded) await loadModels();
@@ -54,7 +78,7 @@ export const getFaceDescriptor = async (imageUrl) => {
 };
 
 // Compare two descriptors (Euclidean distance)
-export const isMatch = (descriptor1, descriptor2, threshold = 0.6) => {
+export const isMatch = (descriptor1, descriptor2, threshold = 0.5) => {
     const distance = faceapi.euclideanDistance(descriptor1, descriptor2);
     return distance < threshold;
 };

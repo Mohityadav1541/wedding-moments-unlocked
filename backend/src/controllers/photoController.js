@@ -1,7 +1,7 @@
 import Photo from '../models/Photo.js';
 import Event from '../models/Event.js';
 import { cloudinary } from '../config/cloudinary.js';
-import { getFaceDescriptor, isMatch } from '../services/faceService.js';
+import { getFaceDescriptor, getAllFaceDescriptors, isMatch } from '../services/faceService.js';
 
 // @desc    Get photos for an event
 // @route   GET /api/photos/:eventId
@@ -22,10 +22,8 @@ export const addPhoto = async (req, res) => {
     const { eventId } = req.body;
     let url = req.body.url;
 
-    // Local file from multer (if used)
+    // Local file from multer
     if (req.file) {
-        // Normalize path and use Cloudinary URL if available in req.file.path
-        // If uploadMiddleware uploads to cloudinary, req.file.path IS the cloudinary URL usually
         url = req.file.path;
     }
 
@@ -45,16 +43,14 @@ export const addPhoto = async (req, res) => {
         }
 
         // --- AI PROCESS START ---
-        // Compute face descriptor
-        // Use the URL directly. FaceAPI will fetch it.
-        // NOTE: For very large images, this might be slow using URL.
-        const descriptor = await getFaceDescriptor(url);
+        // Compute ALL face descriptors (detects multiple people)
+        const descriptors = await getAllFaceDescriptors(url);
         // --- AI PROCESS END ---
 
         const photo = new Photo({
             event: eventId,
             url,
-            faceDescriptor: descriptor || [] // Store array or empty
+            faceDescriptors: descriptors || []
         });
 
         const createdPhoto = await photo.save();
@@ -80,7 +76,7 @@ export const searchPhotos = async (req, res) => {
     }
 
     try {
-        // 1. Compute descriptor for Selfie
+        // 1. Compute descriptor for Selfie (Single face expected)
         const selfieDescriptor = await getFaceDescriptor(selfieUrl);
 
         if (!selfieDescriptor) {
@@ -94,12 +90,15 @@ export const searchPhotos = async (req, res) => {
         // Optimization: We could use MongoDB vector search if available, but for now JS filter is fine for <1000 photos
         const eventPhotos = await Photo.find({
             event: eventId,
-            $expr: { $gt: [{ $size: "$faceDescriptor" }, 0] }
+            $expr: { $gt: [{ $size: "$faceDescriptors" }, 0] }
         });
 
-        // 3. Match faces
+        // 3. Match faces (Check if selfie matches ANY face in the photo)
         const matches = eventPhotos.filter(photo => {
-            return isMatch(selfieDescriptor, photo.faceDescriptor);
+            // photo.faceDescriptors is array of arrays
+            return photo.faceDescriptors.some(descriptor => {
+                return isMatch(selfieDescriptor, descriptor);
+            });
         });
 
         // 4. Transform matches for display (Add Watermark logic)
