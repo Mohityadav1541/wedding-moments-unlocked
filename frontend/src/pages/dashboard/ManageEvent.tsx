@@ -190,7 +190,25 @@ const ManageEvent = () => {
                                         <p className="text-sm text-muted-foreground mb-4">
                                             Share this QR code with guests.
                                         </p>
-                                        <Button variant="outline" size="sm">Download QR</Button>
+                                        <Button variant="outline" size="sm" onClick={async () => {
+                                            try {
+                                                const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=1000x1000&data=${encodeURIComponent(`${window.location.origin}/event/${eventId}`)}`;
+                                                const response = await fetch(qrUrl);
+                                                const blob = await response.blob();
+                                                const url = window.URL.createObjectURL(blob);
+                                                const a = document.createElement('a');
+                                                a.href = url;
+                                                a.download = `event-qr-${eventId}.png`;
+                                                document.body.appendChild(a);
+                                                a.click();
+                                                document.body.removeChild(a);
+                                                window.URL.revokeObjectURL(url);
+                                                toast.success("QR Code downloaded!");
+                                            } catch (error) {
+                                                console.error("Download failed:", error);
+                                                toast.error("Failed to download QR code");
+                                            }
+                                        }}>Download QR</Button>
                                     </div>
                                 </div>
                             </>
