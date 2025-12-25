@@ -66,6 +66,11 @@ const ManageEvent = () => {
                 console.log("Payment response:", res);
 
                 toast.success("Payment marked! Waiting for confirmation.");
+                // Immediately update local state to reflect change pending server refresh
+                setEvent((prev: any) => ({
+                    ...prev,
+                    paymentStatus: 'paid'
+                }));
                 fetchEventDetails(); // Refresh to show new status
             } else {
                 console.log("User cancelled confirmation");
