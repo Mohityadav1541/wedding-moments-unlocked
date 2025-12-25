@@ -127,9 +127,9 @@ const SuperAdminEventDetails = () => {
                             <div className="mb-6">
                                 <p className="text-sm text-muted-foreground mb-2">Uploaded Screenshot:</p>
                                 <div className="border rounded-lg overflow-hidden bg-muted/50 p-2">
-                                    <a href={`http://localhost:5000/${event.paymentScreenshot.replace(/\\/g, "/")}`} target="_blank" rel="noopener noreferrer">
+                                    <a href={event.paymentScreenshot.startsWith('http') ? event.paymentScreenshot : `${import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000'}/${event.paymentScreenshot.replace(/\\/g, "/")}`} target="_blank" rel="noopener noreferrer">
                                         <img
-                                            src={`http://localhost:5000/${event.paymentScreenshot.replace(/\\/g, "/")}`}
+                                            src={event.paymentScreenshot.startsWith('http') ? event.paymentScreenshot : `${import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000'}/${event.paymentScreenshot.replace(/\\/g, "/")}`}
                                             alt="Payment Screenshot"
                                             className="w-full object-contain max-h-[400px]"
                                         />

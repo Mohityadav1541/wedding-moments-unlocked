@@ -121,7 +121,7 @@ const SuperAdminDashboard = () => {
                                                 <td className="px-6 py-4">
                                                     {event.paymentScreenshot ? (
                                                         <a
-                                                            href={`http://localhost:5000/${event.paymentScreenshot.replace(/\\/g, "/")}`}
+                                                            href={event.paymentScreenshot.startsWith('http') ? event.paymentScreenshot : `${import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000'}/${event.paymentScreenshot.replace(/\\/g, "/")}`}
                                                             target="_blank"
                                                             rel="noreferrer"
                                                             className="text-blue-600 hover:underline text-xs"
