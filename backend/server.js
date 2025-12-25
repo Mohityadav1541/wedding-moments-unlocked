@@ -1,0 +1,49 @@
+import express from 'express';
+import path from 'path';
+import dns from 'dns';
+// Force IPv4 and Google DNS to bypass local network restrictions
+dns.setDefaultResultOrder('ipv4first');
+try {
+    dns.setServers(['8.8.8.8', '8.8.4.4']);
+    console.log("Custom DNS set to Google Public DNS");
+} catch (e) {
+    console.warn("Could not set custom DNS servers:", e.message);
+}
+
+import dotenv from 'dotenv';
+import cors from 'cors';
+import connectDB from './src/config/db.js';
+import authRoutes from './src/routes/authRoutes.js';
+import eventRoutes from './src/routes/eventRoutes.js';
+import photoRoutes from './src/routes/photoRoutes.js';
+import userRoutes from './src/routes/userRoutes.js';
+import landingContentRoutes from './src/routes/landingContentRoutes.js';
+
+dotenv.config();
+
+const port = process.env.PORT || 5000;
+
+connectDB();
+
+const app = express();
+
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
+
+app.use('/api/auth', authRoutes);
+app.use('/api/events', eventRoutes);
+app.use('/api/photos', photoRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/content', landingContentRoutes);
+console.log('Registered /api/content route');
+
+app.get('/', (req, res) => {
+    res.send('API is running...');
+});
+
+// Make uploads folder static
+const __dirname = path.resolve();
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+app.listen(port, () => console.log(`Server started on port ${port}`));

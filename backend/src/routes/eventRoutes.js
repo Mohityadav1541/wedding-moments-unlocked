@@ -1,0 +1,22 @@
+import express from 'express';
+import {
+    createEvent,
+    getEvents,
+    getEventById,
+    markEventPaid,
+    confirmEventPayment,
+    getRevenueStats,
+    deleteEvent
+} from '../controllers/eventController.js';
+import { protect, admin, superAdmin } from '../middleware/authMiddleware.js';
+import upload from '../middleware/uploadMiddleware.js';
+
+const router = express.Router();
+
+router.route('/').post(protect, admin, createEvent).get(protect, getEvents);
+router.route('/revenue').get(protect, superAdmin, getRevenueStats);
+router.route('/:id').get(protect, getEventById).delete(protect, superAdmin, deleteEvent);
+router.route('/:id/pay').put(protect, admin, upload.single('screenshot'), markEventPaid);
+router.route('/:id/confirm').put(protect, confirmEventPayment); // Only superadmin should access, but protect checks login
+
+export default router;
