@@ -1,7 +1,7 @@
 import Photo from '../models/Photo.js';
 import Event from '../models/Event.js';
 import { cloudinary } from '../config/cloudinary.js';
-import { getFaceDescriptor, getAllFaceDescriptors, isMatch } from '../services/faceService.js';
+import { getFaceDescriptor, getAllFaceDescriptors, isMatch } from '../services/externalAiService.js';
 
 // @desc    Get photos for an event
 // @route   GET /api/photos/:eventId
@@ -43,7 +43,8 @@ export const addPhoto = async (req, res) => {
         }
 
         // --- AI PROCESS START ---
-        // Compute ALL face descriptors (detects multiple people)
+        // Compute ALL face descriptors (detects multiple people) using External Python API
+        // This offloads heavy processing from our Node server
         const descriptors = await getAllFaceDescriptors(url);
         // --- AI PROCESS END ---
 
@@ -76,7 +77,7 @@ export const searchPhotos = async (req, res) => {
     }
 
     try {
-        // 1. Compute descriptor for Selfie (Single face expected)
+        // 1. Compute descriptor for Selfie (Single face expected) - External API
         const selfieDescriptor = await getFaceDescriptor(selfieUrl);
 
         if (!selfieDescriptor) {
