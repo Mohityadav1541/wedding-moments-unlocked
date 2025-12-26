@@ -98,7 +98,9 @@ const EventPage = () => {
     } catch (error: any) {
       console.error("AI Search Failed:", error);
       if (error.response?.status === 500) {
-        toast.error("Server error. Please try again in 1 minute.");
+        // Show actual server error if available
+        const serverMessage = error.response.data?.message;
+        toast.error(serverMessage || "Server error. Please try again in 1 minute.");
       } else {
         toast.error("Failed to find photos. Please try again.");
       }

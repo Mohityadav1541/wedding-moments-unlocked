@@ -46,4 +46,14 @@ app.get('/', (req, res) => {
 const __dirname = path.resolve();
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// Global Error Handler
+app.use((err, req, res, next) => {
+    console.error("Global Error Handler:", err.stack);
+    res.status(500).json({
+        message: err.message || 'Server Error',
+        stack: process.env.NODE_ENV === 'production' ? null : err.stack,
+    });
+});
+
+
 app.listen(port, () => console.log(`Server started on port ${port}`));
