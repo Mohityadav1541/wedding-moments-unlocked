@@ -16,13 +16,13 @@ const loadModels = async () => {
         const modelUrl = 'https://vladmandic.github.io/face-api/model/';
 
         await Promise.all([
-            faceapi.nets.ssdMobilenetv1.loadFromUri(modelUrl),
+            faceapi.nets.tinyFaceDetector.loadFromUri(modelUrl),
             faceapi.nets.faceLandmark68Net.loadFromUri(modelUrl),
             faceapi.nets.faceRecognitionNet.loadFromUri(modelUrl)
         ]);
 
         modelsLoaded = true;
-        console.log("FaceAPI models loaded successfully.");
+        console.log("FaceAPI models loaded successfully (Tiny Face Detector).");
     } catch (error) {
         console.error("Failed to load FaceAPI models:", error);
     }
@@ -35,8 +35,8 @@ export const getAllFaceDescriptors = async (imageUrl) => {
 
         const img = await canvas.loadImage(imageUrl);
 
-        // Detect ALL faces
-        const detections = await faceapi.detectAllFaces(img)
+        // Detect ALL faces using Tiny Face Detector
+        const detections = await faceapi.detectAllFaces(img, new faceapi.TinyFaceDetectorOptions())
             .withFaceLandmarks()
             .withFaceDescriptors();
 
@@ -60,8 +60,8 @@ export const getFaceDescriptor = async (imageUrl) => {
         // Load image using canvas
         const img = await canvas.loadImage(imageUrl);
 
-        // Detect face with highest confidence
-        const detection = await faceapi.detectSingleFace(img)
+        // Detect face with highest confidence using Tiny Face Detector
+        const detection = await faceapi.detectSingleFace(img, new faceapi.TinyFaceDetectorOptions())
             .withFaceLandmarks()
             .withFaceDescriptor();
 
