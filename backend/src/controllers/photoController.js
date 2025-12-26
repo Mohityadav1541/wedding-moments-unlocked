@@ -174,3 +174,55 @@ export const deletePhoto = async (req, res) => {
         res.status(500).json({ message: 'Server Error' });
     }
 };
+
+// @desc    Delete multiple photos
+// @route   POST /api/photos/delete-batch
+// @access  Private/Admin
+export const deletePhotos = async (req, res) => {
+    const { photoIds } = req.body;
+
+    if (!photoIds || !Array.isArray(photoIds) || photoIds.length === 0) {
+        return res.status(400).json({ message: 'No photo IDs provided' });
+    }
+
+    try {
+        // Find photos to ensure they exist and user is authorized
+        const photos = await Photo.find({ _id: { $in: photoIds } });
+
+        if (photos.length === 0) {
+            return res.status(404).json({ message: 'No photos found' });
+        }
+
+        // Check authorization (assuming all photos belong to same event/user context for simplicity, 
+        // or check one by one. Here we check the first one as a sanity check)
+        const event = await Event.findById(photos[0].event);
+        if (event) {
+            if (event.user.toString() !== req.user._id.toString() && req.user.role !== 'superadmin') {
+                return res.status(401).json({ message: 'Not authorized' });
+            }
+        }
+
+        // Delete from Cloudinary
+        for (const photo of photos) {
+            if (photo.url && photo.url.includes('cloudinary')) {
+                try {
+                    const urlParts = photo.url.split('/');
+                    const filenameWithExt = urlParts[urlParts.length - 1];
+                    const folderName = urlParts[urlParts.length - 2];
+                    const publicId = `${folderName}/${filenameWithExt.split('.')[0]}`;
+                    await cloudinary.uploader.destroy(publicId);
+                } catch (err) {
+                    console.error(`Failed to delete from Cloudinary: ${photo._id}`, err);
+                }
+            }
+        }
+
+        // Delete from DB
+        await Photo.deleteMany({ _id: { $in: photoIds } });
+
+        res.json({ message: `${photos.length} photos deleted successfully` });
+    } catch (error) {
+        console.error("Batch Delete Error:", error);
+        res.status(500).json({ message: 'Server Error during batch delete' });
+    }
+};

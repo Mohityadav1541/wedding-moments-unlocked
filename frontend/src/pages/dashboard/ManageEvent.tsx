@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Calendar, MapPin, Image, Upload, Trash2 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ArrowLeft, Calendar, MapPin, Image, Upload, Trash2, X } from "lucide-react";
 import api from "@/lib/api";
 import { toast } from "sonner";
 
@@ -13,6 +14,8 @@ const ManageEvent = () => {
     const [screenshot, setScreenshot] = useState<File | null>(null);
     const [photos, setPhotos] = useState([]);
     const [photosLoading, setPhotosLoading] = useState(true);
+    const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
+    const [selectedPhotos, setSelectedPhotos] = useState<string[]>([]);
 
     useEffect(() => {
         fetchEventDetails();
@@ -81,6 +84,35 @@ const ManageEvent = () => {
         }
     };
 
+    const handleBulkDelete = async () => {
+        if (!selectedPhotos.length) return;
+        if (confirm(`Delete ${selectedPhotos.length} photos? This cannot be undone.`)) {
+            try {
+                await api.post('/photos/delete-batch', { photoIds: selectedPhotos });
+                toast.success(`${selectedPhotos.length} photos deleted`);
+                setSelectedPhotos([]);
+                fetchPhotos();
+            } catch (error) {
+                console.error("Bulk delete failed:", error);
+                toast.error("Failed to delete photos");
+            }
+        }
+    };
+
+    const toggleSelection = (id: string) => {
+        setSelectedPhotos(prev =>
+            prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]
+        );
+    };
+
+    const toggleSelectAll = () => {
+        if (selectedPhotos.length === photos.length) {
+            setSelectedPhotos([]);
+        } else {
+            setSelectedPhotos(photos.map((p: any) => p._id));
+        }
+    };
+
     if (loading) return <DashboardLayout userRole="admin"><div className="p-8">Loading...</div></DashboardLayout>;
     if (!event) return <DashboardLayout userRole="admin"><div className="p-8">Event not found</div></DashboardLayout>;
 
@@ -137,6 +169,7 @@ const ManageEvent = () => {
                                         try {
                                             await api.post('/photos', formData);
                                             uploadedCount++;
+                                            setUploadProgress({ current: uploadedCount, total: totalFiles });
                                             if (uploadedCount % 3 === 0) {
                                                 toast.info(`Uploaded ${uploadedCount}/${totalFiles}...`);
                                             }
@@ -151,12 +184,30 @@ const ManageEvent = () => {
                                 }
                             }}
                         />
-                        <Button variant="rose" className="gap-2" onClick={() => document.getElementById('photo-upload')?.click()}>
+                        <Button variant="rose" className="gap-2" onClick={() => document.getElementById('photo-upload')?.click()} disabled={uploadProgress.total > 0 && uploadProgress.current < uploadProgress.total}>
                             <Upload className="h-4 w-4" />
-                            Upload Photos
+                            {uploadProgress.total > 0 && uploadProgress.current < uploadProgress.total
+                                ? `Uploading... (${uploadProgress.current}/${uploadProgress.total})`
+                                : "Upload Photos"}
                         </Button>
                     </div>
                 </div>
+
+                {/* Bulk Actions Header */}
+                {selectedPhotos.length > 0 && (
+                    <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 mb-6 flex items-center justify-between animate-in fade-in slide-in-from-top-2">
+                        <div className="flex items-center gap-2">
+                            <span className="font-semibold text-primary">{selectedPhotos.length} photos selected</span>
+                            <Button variant="ghost" size="sm" onClick={() => setSelectedPhotos([])} className="h-auto p-1 text-muted-foreground">
+                                <X className="h-4 w-4" />
+                            </Button>
+                        </div>
+                        <Button variant="destructive" size="sm" onClick={handleBulkDelete} className="gap-2">
+                            <Trash2 className="h-4 w-4" />
+                            Delete Selected
+                        </Button>
+                    </div>
+                )}
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     {/* Stats Card */}
@@ -307,52 +358,69 @@ const ManageEvent = () => {
                             No photos uploaded yet. Use the upload button above.
                         </div>
                     ) : (
-                        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                            {photos.map((photo: any) => (
-                                <div key={photo._id} className="group relative aspect-square bg-muted rounded-lg overflow-hidden border border-border">
-                                    <img
-                                        src={photo.url}
-                                        alt="Event photo"
-                                        className="w-full h-full object-cover transition-transform group-hover:scale-105"
-                                    />
-                                    {/* Overlay with Delete Button */}
-                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                                        <a
-                                            href={photo.url}
-                                            target="_blank"
-                                            rel="noreferrer"
-                                            className="p-2 bg-white/10 hover:bg-white/20 text-white rounded-full backdrop-blur-sm"
-                                            title="View Full"
-                                        >
-                                            <Image className="h-4 w-4" />
-                                        </a>
-                                        <button
-                                            onClick={async () => {
-                                                if (confirm("Delete this photo? It will be removed from the cloud.")) {
-                                                    try {
-                                                        await api.delete(`/photos/${photo._id}`);
-                                                        toast.success("Photo deleted");
-                                                        fetchPhotos(); // Refresh list
-                                                    } catch (error) {
-                                                        console.error(error);
-                                                        toast.error("Failed to delete photo");
-                                                    }
-                                                }
-                                            }}
-                                            className="p-2 bg-red-500/80 hover:bg-red-600 text-white rounded-full backdrop-blur-sm transition-colors"
-                                            title="Delete Photo"
-                                        >
-                                            <Trash2 className="h-4 w-4" />
-                                        </button>
-                                    </div>
-                                    {/* Watermark Indicator (Optional visualization) */}
-                                    {photo.url.includes('layer_apply') && (
-                                        <div className="absolute bottom-1 right-1 text-[10px] text-white/50 bg-black/30 px-1 rounded">
-                                            Watermarked
+                        <div className="space-y-4">
+                            <div className="flex items-center gap-2 mb-2">
+                                <Checkbox
+                                    checked={photos.length > 0 && selectedPhotos.length === photos.length}
+                                    onCheckedChange={toggleSelectAll}
+                                />
+                                <span className="text-sm text-muted-foreground">Select All</span>
+                            </div>
+                            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                                {photos.map((photo: any) => (
+                                    <div key={photo._id} className={`group relative aspect-square bg-muted rounded-lg overflow-hidden border ${selectedPhotos.includes(photo._id) ? 'border-primary ring-2 ring-primary/20' : 'border-border'}`}>
+                                        <div className="absolute top-2 left-2 z-10">
+                                            <Checkbox
+                                                checked={selectedPhotos.includes(photo._id)}
+                                                onCheckedChange={() => toggleSelection(photo._id)}
+                                                className="bg-white/80 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
+                                            />
                                         </div>
-                                    )}
-                                </div>
-                            ))}
+                                        <img
+                                            src={photo.url}
+                                            alt="Event photo"
+                                            className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                                            onClick={() => toggleSelection(photo._id)} // Click image to select
+                                        />
+                                        {/* Overlay with Delete Button */}
+                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                                            <a
+                                                href={photo.url}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="p-2 bg-white/10 hover:bg-white/20 text-white rounded-full backdrop-blur-sm"
+                                                title="View Full"
+                                            >
+                                                <Image className="h-4 w-4" />
+                                            </a>
+                                            <button
+                                                onClick={async () => {
+                                                    if (confirm("Delete this photo? It will be removed from the cloud.")) {
+                                                        try {
+                                                            await api.delete(`/photos/${photo._id}`);
+                                                            toast.success("Photo deleted");
+                                                            fetchPhotos(); // Refresh list
+                                                        } catch (error) {
+                                                            console.error(error);
+                                                            toast.error("Failed to delete photo");
+                                                        }
+                                                    }
+                                                }}
+                                                className="p-2 bg-red-500/80 hover:bg-red-600 text-white rounded-full backdrop-blur-sm transition-colors"
+                                                title="Delete Photo"
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </button>
+                                        </div>
+                                        {/* Watermark Indicator (Optional visualization) */}
+                                        {photo.url.includes('layer_apply') && (
+                                            <div className="absolute bottom-1 right-1 text-[10px] text-white/50 bg-black/30 px-1 rounded">
+                                                Watermarked
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                     )}
                 </div>
