@@ -128,7 +128,7 @@ export const searchPhotos = async (req, res) => {
                 // Encode text for Cloudinary URL (e.g. spaces to %20)
                 const text = encodeURIComponent(eventFeatures.watermarkText || 'Wedding Moments AI');
                 // Cloudinary transformation: overlay text, bottom right, white, opacity 60%
-                const transformation = `l_text:Arial_80_bold:${text},g_south_east,x_30,y_30,co_white,o_60`;
+                const transformation = `l_text:Arial_80_bold:${text},g_center,co_white,o_60`;
                 downloadUrl = `${parts[0]}/upload/${transformation}/${parts[1]}`;
             }
 
