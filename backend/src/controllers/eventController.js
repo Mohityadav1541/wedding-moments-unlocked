@@ -1,4 +1,5 @@
 import Event from '../models/Event.js';
+import User from '../models/User.js';
 import Photo from '../models/Photo.js';
 import { cloudinary } from '../config/cloudinary.js';
 
@@ -36,6 +37,8 @@ export const createEvent = async (req, res) => {
     }
 
     try {
+        const user = await User.findById(req.user._id);
+
         const event = new Event({
             user: req.user._id,
             name,
@@ -44,7 +47,13 @@ export const createEvent = async (req, res) => {
             package: selectedPackage || 'Standard',
             price,
             paymentStatus: 'pending', // Default
-            superAdminConfirmed: false
+            superAdminConfirmed: false,
+            features: {
+                watermarkEnabled: true,
+                watermarkText: user.studioName || 'Wedding Moments AI',
+                qrCode: true,
+                faceRecognition: true
+            }
         });
 
         const createdEvent = await event.save();
@@ -52,6 +61,43 @@ export const createEvent = async (req, res) => {
     } catch (error) {
         console.error("Create Event Error:", error);
         res.status(400).json({ message: error.message || 'Invalid data' });
+    }
+};
+
+// @desc    Update event details (e.g. settings)
+// @route   PUT /api/events/:id
+// @access  Private/Admin
+export const updateEvent = async (req, res) => {
+    try {
+        const event = await Event.findById(req.params.id);
+
+        if (event) {
+            // Check authorization
+            if (event.user.toString() !== req.user._id.toString() && req.user.role !== 'superadmin') {
+                return res.status(401).json({ message: 'Not authorized' });
+            }
+
+            // Update fields if present in body
+            if (req.body.name) event.name = req.body.name;
+            if (req.body.date) event.date = req.body.date;
+            if (req.body.location) event.location = req.body.location;
+
+            // Update features carefully (merge)
+            if (req.body.features) {
+                event.features = {
+                    ...event.features, // existing
+                    ...req.body.features // new
+                };
+            }
+
+            const updatedEvent = await event.save();
+            res.json(updatedEvent);
+        } else {
+            res.status(404).json({ message: 'Event not found' });
+        }
+    } catch (error) {
+        console.error("Update Event Error:", error);
+        res.status(500).json({ message: 'Server Error' });
     }
 };
 

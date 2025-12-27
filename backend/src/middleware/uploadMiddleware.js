@@ -42,6 +42,18 @@ const storage = new CloudinaryStorage({
             }
         }
 
+        // Auto-Compression & Optimization for Mobile
+        // Resizes huge DSLR photos to max 2500px width (approx 4K quality, perfect for mobile)
+        // 'limit' ensures small images are NOT scaled up
+        // 'q_auto' automatically adjusts quality to human-eye perception (saves ~60% size)
+        // 'f_auto' serves WebP/AVIF to compatible devices
+        transformation.push({
+            width: 2500,
+            crop: "limit",
+            quality: "auto",
+            fetch_format: "auto"
+        });
+
         return {
             folder: 'wedding-ai',
             allowed_formats: ['jpg', 'png', 'jpeg', 'webp'],

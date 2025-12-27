@@ -16,6 +16,11 @@ interface EventData {
   coverImage?: string;
   photos?: any[];
   price?: number;
+  user?: { name: string };
+  features?: {
+    watermarkEnabled: boolean;
+    watermarkText: string;
+  };
 }
 
 const EventPage = () => {
@@ -232,7 +237,8 @@ const EventPage = () => {
             <PhotoGallery
               photos={matchedPhotos}
               photoPrice={event.price || 0}
-              photographerName={"Wedding Moment AI"}
+              photographerName={event.user?.name || "Wedding Moment AI"}
+              watermarkEnabled={event.features?.watermarkEnabled ?? true}
             />
           </div>
         )}

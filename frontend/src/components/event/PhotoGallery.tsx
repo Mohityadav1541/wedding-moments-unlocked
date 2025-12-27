@@ -16,9 +16,10 @@ interface PhotoGalleryProps {
   photos: Photo[];
   photoPrice: number;
   photographerName: string;
+  watermarkEnabled: boolean;
 }
 
-const PhotoGallery = ({ photos, photoPrice, photographerName }: PhotoGalleryProps) => {
+const PhotoGallery = ({ photos, photoPrice, photographerName, watermarkEnabled }: PhotoGalleryProps) => {
   const [selectedPhotos, setSelectedPhotos] = useState<Set<string>>(new Set());
   const [previewPhoto, setPreviewPhoto] = useState<Photo | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -49,10 +50,11 @@ const PhotoGallery = ({ photos, photoPrice, photographerName }: PhotoGalleryProp
 
     let successCount = 0;
     for (const photo of photosToDownload) {
-      if (photo.downloadUrl) {
+      const targetUrl = photo.downloadUrl || photo.url;
+      if (targetUrl) {
         try {
           // Fetch blob to avoid browser opening in new tab
-          const response = await fetch(photo.downloadUrl);
+          const response = await fetch(targetUrl);
           const blob = await response.blob();
           const url = window.URL.createObjectURL(blob);
           const a = document.createElement('a');
@@ -68,7 +70,7 @@ const PhotoGallery = ({ photos, photoPrice, photographerName }: PhotoGalleryProp
         } catch (err) {
           console.error("Download failed", err);
           // Fallback to opening in new tab
-          window.open(photo.downloadUrl, '_blank');
+          window.open(targetUrl, '_blank');
         }
       }
     }
@@ -85,7 +87,7 @@ const PhotoGallery = ({ photos, photoPrice, photographerName }: PhotoGalleryProp
     toast.info("Redirecting to payment...");
   };
 
-  const isFree = photoPrice === 0;
+  const isFree = true;
 
   return (
     <div>
@@ -119,7 +121,7 @@ const PhotoGallery = ({ photos, photoPrice, photographerName }: PhotoGalleryProp
                   ) : (
                     <Download className="h-4 w-4" />
                   )}
-                  Download Free (Watermarked)
+                  {selectedPhotos.size > 1 ? `Download All (${selectedPhotos.size})` : "Download Photo"}
                 </Button>
               ) : (
                 <Button variant="gold" onClick={handleBuyPremium} className="gap-2">
@@ -156,11 +158,13 @@ const PhotoGallery = ({ photos, photoPrice, photographerName }: PhotoGalleryProp
                 />
 
                 {/* Watermark Overlay */}
-                <div className="watermark-overlay">
-                  <div className="watermark-text">
-                    {photographerName}
+                {watermarkEnabled && (
+                  <div className="watermark-overlay">
+                    <div className="watermark-text">
+                      {photographerName}
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Confidence Badge */}
                 <div className="absolute top-2 left-2 bg-background/80 backdrop-blur-sm px-2 py-1 rounded-full">
@@ -200,11 +204,13 @@ const PhotoGallery = ({ photos, photoPrice, photographerName }: PhotoGalleryProp
                   className="w-full h-full object-contain bg-muted"
                 />
                 {/* Large Watermark */}
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <p className="font-display text-4xl text-foreground/20 italic rotate-[-15deg] select-none">
-                    {photographerName}
-                  </p>
-                </div>
+                {watermarkEnabled && (
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <p className="font-display text-4xl text-foreground/20 italic rotate-[-15deg] select-none">
+                      {photographerName}
+                    </p>
+                  </div>
+                )}
               </div>
               <div className="p-4 flex justify-between items-center border-t border-border">
                 <span className="font-body text-sm text-muted-foreground">

@@ -25,6 +25,8 @@ const eventSchema = new mongoose.Schema({
     features: {
         qrCode: { type: Boolean, default: true },
         faceRecognition: { type: Boolean, default: true },
+        watermarkEnabled: { type: Boolean, default: true },
+        watermarkText: { type: String, default: 'Wedding Moments AI' }
     },
     // Payment & Package Details
     package: {

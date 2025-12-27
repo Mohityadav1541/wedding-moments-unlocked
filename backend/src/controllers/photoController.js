@@ -88,11 +88,13 @@ export const searchPhotos = async (req, res) => {
         }
 
         // 2. Fetch all photos for this event that HAVE descriptors
-        // Optimization: We could use MongoDB vector search if available, but for now JS filter is fine for <1000 photos
         const eventPhotos = await Photo.find({
             event: eventId,
             $expr: { $gt: [{ $size: "$faceDescriptors" }, 0] }
         });
+
+        const event = await Event.findById(eventId);
+        const eventFeatures = event ? event.features : { watermarkEnabled: true, watermarkText: 'Wedding Moments' };
 
         // 3. Match faces (Check if selfie matches ANY face in the photo)
         const matches = eventPhotos.filter(photo => {
@@ -111,10 +113,22 @@ export const searchPhotos = async (req, res) => {
             // Example: https://res.cloudinary.com/cloud/image/upload/v1234/folder/file.jpg
             // Target: https://res.cloudinary.com/cloud/image/upload/l_text:Arial_80_bold:Wedding%20AI,g_south_east,co_white,o_80/v1234/folder/file.jpg
 
+            // Fetch event settings for watermark
+            // We already have eventId, let's look up the event features
+            // Optimization: In a real app, populate this earlier or cache it, 
+            // but for now we fetch it inside the loop or mock it? 
+            // Actually, we need to fetch the event once outside the loop.
+
             let downloadUrl = photo.url;
-            if (photo.url.includes('/upload/')) {
+
+            // Check if watermark is enabled for this event
+            // (Passed from top scope - we need to fetch event first)
+            if (eventFeatures.watermarkEnabled && photo.url.includes('/upload/')) {
                 const parts = photo.url.split('/upload/');
-                const transformation = 'l_text:Arial_60_bold:Wedding%20AI,g_south_east,co_white,o_60';
+                // Encode text for Cloudinary URL (e.g. spaces to %20)
+                const text = encodeURIComponent(eventFeatures.watermarkText || 'Wedding Moments AI');
+                // Cloudinary transformation: overlay text, bottom right, white, opacity 60%
+                const transformation = `l_text:Arial_80_bold:${text},g_south_east,x_30,y_30,co_white,o_60`;
                 downloadUrl = `${parts[0]}/upload/${transformation}/${parts[1]}`;
             }
 
