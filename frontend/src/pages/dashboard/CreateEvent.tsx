@@ -31,7 +31,11 @@ const CreateEvent = () => {
     }, []);
 
     // Check quota logic
-    const hasActiveSubscription = user.subscription?.status === 'active' && new Date(user.subscription?.expiresAt) > new Date();
+    const isPlanActive = user.subscription?.status === 'active';
+    // If expiresAt is null (per-event plan), it's considered not expired.
+    const isNotExpired = !user.subscription?.expiresAt || new Date(user.subscription?.expiresAt) > new Date();
+
+    const hasActiveSubscription = isPlanActive && isNotExpired;
     const hasQuota = (user.subscription?.quota || 0) > 0;
 
     // Superadmin bypass

@@ -116,18 +116,20 @@ export const updateTransactionStatus = async (req, res) => {
 
 // Helper to get hardcoded plan details (Mirroring frontend for safety)
 const getPlanDetails = (planName) => {
-    switch (planName) {
-        case 'Basic':
+    const normalizedPlan = planName?.toLowerCase().trim();
+    switch (normalizedPlan) {
+        case 'basic':
             return { photoLimit: 2000, storageLimit: 60, period: 'event' };
-        case 'Standard':
+        case 'standard':
             return { photoLimit: 5000, storageLimit: 120, period: 'event' };
-        case 'Premium':
+        case 'premium':
             return { photoLimit: 10000, storageLimit: 365, period: 'event' };
-        case 'Studio Monthly':
+        case 'studio monthly':
             return { photoLimit: 1000000, storageLimit: 365, period: 'month' }; // Unlimited
-        case 'Studio Yearly':
+        case 'studio yearly':
             return { photoLimit: 1000000, storageLimit: 365, period: 'year' };
         default:
+            console.warn(`Unknown plan name: ${planName}`);
             return { photoLimit: 0, storageLimit: 0, period: 'none' };
     }
 };
