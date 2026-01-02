@@ -34,10 +34,11 @@ const SuperAdminDashboard = () => {
         try {
             await api.put(`/transactions/${transactionId}/status`, { status: 'approved' });
             toast.success("Transaction approved and user plan updated!");
-            fetchDashboardData();
         } catch (error: any) {
             console.error(error);
             toast.error(error.response?.data?.message || "Failed to approve transaction");
+        } finally {
+            fetchDashboardData();
         }
     };
 
@@ -46,10 +47,11 @@ const SuperAdminDashboard = () => {
         try {
             await api.put(`/transactions/${transactionId}/status`, { status: 'rejected' });
             toast.success("Transaction rejected.");
-            fetchDashboardData();
         } catch (error: any) {
             console.error(error);
             toast.error(error.response?.data?.message || "Failed to reject transaction");
+        } finally {
+            fetchDashboardData();
         }
     };
 
