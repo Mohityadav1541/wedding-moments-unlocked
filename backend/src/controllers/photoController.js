@@ -66,8 +66,14 @@ export const addPhoto = async (req, res) => {
         // Compute ALL face descriptors (detects multiple people) using External Python API
         // This offloads heavy processing from our Node server
         console.log(`[Photo] Starting AI processing for: ${url}`);
-        const descriptors = await getAllFaceDescriptors(url);
-        console.log(`[Photo] AI Processing complete. Descriptors found: ${descriptors ? descriptors.length : 0}`);
+        let descriptors = [];
+        try {
+            descriptors = await getAllFaceDescriptors(url);
+            console.log(`[Photo] AI Processing complete. Descriptors found: ${descriptors ? descriptors.length : 0}`);
+        } catch (aiError) {
+            console.error("[Photo] AI Service Failed (Soft Fail):", aiError.message);
+            // Proceed without descriptors - don't block upload
+        }
         // --- AI PROCESS END ---
 
         const photo = new Photo({
@@ -81,7 +87,7 @@ export const addPhoto = async (req, res) => {
         res.status(201).json(createdPhoto);
     } catch (error) {
         console.error("Add Photo Error:", error);
-        res.status(400).json({ message: 'Invalid data or AI processing failed' });
+        res.status(400).json({ message: error.message || 'Invalid data or AI processing failed' });
     }
 };
 
