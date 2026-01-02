@@ -109,8 +109,8 @@ export const updateTransactionStatus = async (req, res) => {
 
         res.json(transaction);
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Server Error' });
+        console.error("Error approving transaction:", error);
+        res.status(500).json({ message: error.message || 'Server Error' });
     }
 };
 
