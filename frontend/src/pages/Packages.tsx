@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Check, Crown, Zap, Shield } from "lucide-react";
+import { Check, Crown, Zap, Shield, Camera, Star } from "lucide-react";
 import { toast } from "sonner";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -18,37 +18,84 @@ const Packages = () => {
 
     const plans = [
         {
-            name: "Standard Wedding",
-            price: "₹1499",
-            period: "/wedding",
-            description: "Essential storage for intimate weddings",
+            name: "Basic",
+            price: "₹999",
+            period: "/event",
+            description: "Perfect for small events and parties",
             features: [
-                "15 GB Storage",
-                "Up to 1 Event",
-                "Unlimited Photos",
-                "Photographer Watermark",
-                "Basic Face Recognition",
-                "Standard Support"
+                "Up to 2,000 Photos",
+                "60 Days Storage",
+                "Unlimited Guest Scans",
+                "Standard Support",
+                "Watermarked Downloads",
+                "Basic Analytics"
             ],
             icon: Shield,
             popular: false
         },
         {
-            name: "Premium Wedding",
-            price: "₹2999",
-            period: "/wedding",
-            description: "Extra storage for grand celebrations",
+            name: "Standard",
+            price: "₹1,499",
+            period: "/event",
+            description: "Ideal for weddings and receptions",
             features: [
-                "25 GB Storage",
-                "Up to 1 Event",
-                "Unlimited Photos",
-                "Photographer Watermark",
-                "Advanced Face Recognition",
+                "Up to 5,000 Photos",
+                "120 Days Storage",
+                "Unlimited Guest Scans",
                 "Priority Support",
-                "Custom Branding"
+                "Watermarked Downloads",
+                "Advanced Analytics"
+            ],
+            icon: Zap,
+            popular: true
+        },
+        {
+            name: "Premium",
+            price: "₹1,999",
+            period: "/event",
+            description: "For grand weddings with maximum coverage",
+            features: [
+                "Up to 10,000 Photos",
+                "1 Year Storage",
+                "Unlimited Guest Scans",
+                "Premium Support",
+                "Custom Branding",
+                "AI Face Recognition"
             ],
             icon: Crown,
-            popular: true
+            popular: false
+        },
+        {
+            name: "Studio Monthly",
+            price: "₹1,999",
+            period: "/month",
+            description: "For busy studios managing multiple events",
+            features: [
+                "Unlimited Photos",
+                "1 Year Storage",
+                "Unlimited Guest Scans",
+                "Priority Support",
+                "Multiple Events",
+                "Studio Branding"
+            ],
+            icon: Camera,
+            popular: false
+        },
+        {
+            name: "Studio Yearly",
+            price: "₹17,999",
+            period: "/year",
+            description: "Best value for professional photography businesses",
+            features: [
+                "Unlimited Photos",
+                "1 Year Storage",
+                "Unlimited Guest Scans",
+                "VIP Support",
+                "Multiple Events",
+                "Studio Branding"
+            ],
+            icon: Star, // Need to import Star
+            popular: false
         }
     ];
 
