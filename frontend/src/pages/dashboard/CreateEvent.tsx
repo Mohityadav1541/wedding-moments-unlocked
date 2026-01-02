@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,8 +10,25 @@ import { toast } from "sonner";
 
 const CreateEvent = () => {
     const navigate = useNavigate();
+    const [user, setUser] = useState(JSON.parse(localStorage.getItem('user') || '{}'));
+    const [fetchingProfile, setFetchingProfile] = useState(true);
     const [loading, setLoading] = useState(false);
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
+
+    // Fetch latest profile to ensure quota is up to date
+    useEffect(() => {
+        const fetchProfile = async () => {
+            try {
+                const { data } = await api.get('/users/profile');
+                setUser(prev => ({ ...prev, ...data }));
+                localStorage.setItem('user', JSON.stringify({ ...user, ...data }));
+            } catch (error) {
+                console.error("Failed to fetch fresh profile", error);
+            } finally {
+                setFetchingProfile(false);
+            }
+        };
+        fetchProfile();
+    }, []);
 
     // Check quota logic
     const hasActiveSubscription = user.subscription?.status === 'active' && new Date(user.subscription?.expiresAt) > new Date();
@@ -19,6 +36,16 @@ const CreateEvent = () => {
 
     // Superadmin bypass
     const canCreate = user.role === 'superadmin' || hasActiveSubscription || hasQuota;
+
+    if (fetchingProfile) {
+        return (
+            <DashboardLayout userRole="admin">
+                <div className="flex h-[50vh] items-center justify-center">
+                    <p className="text-muted-foreground animate-pulse">Checking subscription status...</p>
+                </div>
+            </DashboardLayout>
+        );
+    }
 
     if (!canCreate) {
         return (
