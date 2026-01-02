@@ -35,8 +35,9 @@ const SuperAdminDashboard = () => {
             await api.put(`/transactions/${transactionId}/status`, { status: 'approved' });
             toast.success("Transaction approved and user plan updated!");
             fetchDashboardData();
-        } catch (error) {
-            toast.error("Failed to approve transaction");
+        } catch (error: any) {
+            console.error(error);
+            toast.error(error.response?.data?.message || "Failed to approve transaction");
         }
     };
 
@@ -46,8 +47,9 @@ const SuperAdminDashboard = () => {
             await api.put(`/transactions/${transactionId}/status`, { status: 'rejected' });
             toast.success("Transaction rejected.");
             fetchDashboardData();
-        } catch (error) {
-            toast.error("Failed to reject transaction");
+        } catch (error: any) {
+            console.error(error);
+            toast.error(error.response?.data?.message || "Failed to reject transaction");
         }
     };
 
@@ -111,67 +113,135 @@ const SuperAdminDashboard = () => {
                             No pending payments to review.
                         </div>
                     ) : (
-                        <div className="bg-card rounded-xl border border-border/50 overflow-hidden">
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-sm text-left">
-                                    <thead className="bg-muted/50 text-muted-foreground font-medium uppercase text-xs">
-                                        <tr>
-                                            <th className="px-6 py-4">User</th>
-                                            <th className="px-6 py-4">Date</th>
-                                            <th className="px-6 py-4">Plan/Amount</th>
-                                            <th className="px-6 py-4">Proof</th>
-                                            <th className="px-6 py-4 text-right">Action</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-border">
-                                        {pendingTransactions.map((t: any) => (
-                                            <tr key={t._id} className="hover:bg-muted/30">
-                                                <td className="px-6 py-4 font-medium text-foreground">
-                                                    <div>{t.user?.name || 'Unknown'}</div>
-                                                    <div className="text-xs text-muted-foreground">{t.user?.email}</div>
-                                                </td>
-                                                <td className="px-6 py-4">{new Date(t.createdAt).toLocaleDateString()}</td>
-                                                <td className="px-6 py-4">
-                                                    <div>{t.plan}</div>
-                                                    <div className="font-bold">₹{t.amount}</div>
-                                                    <div className="text-xs text-muted-foreground">UPI: {t.upiTransactionId}</div>
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    {t.screenshot ? (
-                                                        <a
-                                                            href={t.screenshot}
-                                                            target="_blank"
-                                                            rel="noreferrer"
-                                                            className="text-blue-600 hover:underline text-xs"
-                                                        >
-                                                            View Screenshot
-                                                        </a>
-                                                    ) : (
-                                                        <span className="text-muted-foreground text-xs">No screenshot</span>
-                                                    )}
-                                                </td>
-                                                <td className="px-6 py-4 text-right space-x-2">
-                                                    <Button
-                                                        size="sm"
-                                                        className="bg-green-600 hover:bg-green-700 text-white"
-                                                        onClick={() => handleApproveTransaction(t._id)}
-                                                    >
-                                                        Approve
-                                                    </Button>
-                                                    <Button
-                                                        size="sm"
-                                                        variant="destructive"
-                                                        onClick={() => handleRejectTransaction(t._id)}
-                                                    >
-                                                        Reject
-                                                    </Button>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                        <>
+                            {/* Mobile Card View */}
+                            <div className="md:hidden space-y-4">
+                                {pendingTransactions.map((t: any) => (
+                                    <div key={t._id} className="bg-card p-4 rounded-xl border border-border/50 shadow-sm">
+                                        <div className="flex justify-between items-start mb-3">
+                                            <div>
+                                                <h3 className="font-semibold text-foreground">{t.user?.name || 'Unknown'}</h3>
+                                                <p className="text-xs text-muted-foreground">{t.user?.email}</p>
+                                            </div>
+                                            <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
+                                                {new Date(t.createdAt).toLocaleDateString()}
+                                            </span>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-2 mb-4 text-sm">
+                                            <div className="p-2 bg-muted/30 rounded">
+                                                <p className="text-xs text-muted-foreground uppercase">Plan</p>
+                                                <p className="font-medium">{t.plan}</p>
+                                            </div>
+                                            <div className="p-2 bg-muted/30 rounded">
+                                                <p className="text-xs text-muted-foreground uppercase">Amount</p>
+                                                <p className="font-bold">₹{t.amount}</p>
+                                            </div>
+                                            <div className="col-span-2 p-2 bg-muted/30 rounded">
+                                                <p className="text-xs text-muted-foreground uppercase">UPI Ref</p>
+                                                <p className="font-mono text-xs truncate">{t.upiTransactionId}</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex flex-col gap-3">
+                                            {t.screenshot ? (
+                                                <a
+                                                    href={t.screenshot}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="text-center text-blue-600 hover:underline text-xs bg-blue-50 py-2 rounded"
+                                                >
+                                                    View Payment Screenshot
+                                                </a>
+                                            ) : (
+                                                <div className="text-center text-muted-foreground text-xs py-2 bg-muted/50 rounded">
+                                                    No Screenshot Attached
+                                                </div>
+                                            )}
+
+                                            <div className="grid grid-cols-2 gap-3 mt-1">
+                                                <Button
+                                                    className="bg-green-600 hover:bg-green-700 text-white w-full"
+                                                    onClick={() => handleApproveTransaction(t._id)}
+                                                >
+                                                    Approve
+                                                </Button>
+                                                <Button
+                                                    variant="destructive"
+                                                    className="w-full"
+                                                    onClick={() => handleRejectTransaction(t._id)}
+                                                >
+                                                    Reject
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
-                        </div>
+
+                            {/* Desktop Table View */}
+                            <div className="hidden md:block bg-card rounded-xl border border-border/50 overflow-hidden">
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-sm text-left">
+                                        <thead className="bg-muted/50 text-muted-foreground font-medium uppercase text-xs">
+                                            <tr>
+                                                <th className="px-6 py-4">User</th>
+                                                <th className="px-6 py-4">Date</th>
+                                                <th className="px-6 py-4">Plan/Amount</th>
+                                                <th className="px-6 py-4">Proof</th>
+                                                <th className="px-6 py-4 text-right">Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-border">
+                                            {pendingTransactions.map((t: any) => (
+                                                <tr key={t._id} className="hover:bg-muted/30">
+                                                    <td className="px-6 py-4 font-medium text-foreground">
+                                                        <div>{t.user?.name || 'Unknown'}</div>
+                                                        <div className="text-xs text-muted-foreground">{t.user?.email}</div>
+                                                    </td>
+                                                    <td className="px-6 py-4">{new Date(t.createdAt).toLocaleDateString()}</td>
+                                                    <td className="px-6 py-4">
+                                                        <div>{t.plan}</div>
+                                                        <div className="font-bold">₹{t.amount}</div>
+                                                        <div className="text-xs text-muted-foreground">UPI: {t.upiTransactionId}</div>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        {t.screenshot ? (
+                                                            <a
+                                                                href={t.screenshot}
+                                                                target="_blank"
+                                                                rel="noreferrer"
+                                                                className="text-blue-600 hover:underline text-xs"
+                                                            >
+                                                                View Screenshot
+                                                            </a>
+                                                        ) : (
+                                                            <span className="text-muted-foreground text-xs">No screenshot</span>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-right space-x-2">
+                                                        <Button
+                                                            size="sm"
+                                                            className="bg-green-600 hover:bg-green-700 text-white"
+                                                            onClick={() => handleApproveTransaction(t._id)}
+                                                        >
+                                                            Approve
+                                                        </Button>
+                                                        <Button
+                                                            size="sm"
+                                                            variant="destructive"
+                                                            onClick={() => handleRejectTransaction(t._id)}
+                                                        >
+                                                            Reject
+                                                        </Button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </>
                     )}
                 </div>
                 {/* All Events Section */}
