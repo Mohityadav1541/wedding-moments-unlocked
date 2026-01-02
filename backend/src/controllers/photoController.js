@@ -19,26 +19,33 @@ export const getPhotosByEvent = async (req, res) => {
 // @route   POST /api/photos
 // @access  Private/Admin
 export const addPhoto = async (req, res) => {
-    const { eventId } = req.body;
-    let url = req.body.url;
-
-    // Local file from multer
-    if (req.file) {
-        url = req.file.path;
-    }
-
-    if (!url) {
-        return res.status(400).json({ message: 'No image provided' });
-    }
-
     try {
+        console.log("[Photo] Add Photo Request Received");
+        const { eventId } = req.body;
+        let url = req.body.url;
+
+        // Local file from multer
+        if (req.file) {
+            console.log(`[Photo] File received from Multer: ${req.file.path}`);
+            url = req.file.path;
+        } else {
+            console.log("[Photo] No file in req.file");
+        }
+
+        if (!url) {
+            console.error("[Photo] No URL or File provided");
+            return res.status(400).json({ message: 'No image provided' });
+        }
+
         // Check if event exists
         const event = await Event.findById(eventId);
         if (!event) {
+            console.error(`[Photo] Event not found: ${eventId}`);
             return res.status(404).json({ message: 'Event not found' });
         }
         // Authorization check
         if (event.user.toString() !== req.user._id.toString() && req.user.role !== 'superadmin') {
+            console.error(`[Photo] Authorization failed. User: ${req.user._id}, Event Owner: ${event.user}`);
             return res.status(401).json({ message: 'Not authorized' });
         }
 
@@ -48,15 +55,19 @@ export const addPhoto = async (req, res) => {
 
         // Use user's limit or fallback to a reasonable default if not set
         const limit = user.photoLimit || 2000;
+        console.log(`[Photo] Current Count: ${currentPhotoCount}, Limit: ${limit}`);
 
         if (req.user.role !== 'superadmin' && currentPhotoCount >= limit) {
+            console.warn(`[Photo] Limit reached for user ${req.user._id}`);
             return res.status(403).json({ message: `Photo limit reached (${limit}). Upgrade your plan to upload more.` });
         }
 
         // --- AI PROCESS START ---
         // Compute ALL face descriptors (detects multiple people) using External Python API
         // This offloads heavy processing from our Node server
+        console.log(`[Photo] Starting AI processing for: ${url}`);
         const descriptors = await getAllFaceDescriptors(url);
+        console.log(`[Photo] AI Processing complete. Descriptors found: ${descriptors ? descriptors.length : 0}`);
         // --- AI PROCESS END ---
 
         const photo = new Photo({
@@ -66,6 +77,7 @@ export const addPhoto = async (req, res) => {
         });
 
         const createdPhoto = await photo.save();
+        console.log(`[Photo] Saved to DB: ${createdPhoto._id}`);
         res.status(201).json(createdPhoto);
     } catch (error) {
         console.error("Add Photo Error:", error);
