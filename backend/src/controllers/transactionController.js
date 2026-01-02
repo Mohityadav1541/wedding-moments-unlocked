@@ -63,7 +63,9 @@ export const updateTransactionStatus = async (req, res) => {
             return res.status(404).json({ message: 'Transaction not found' });
         }
 
-        if (transaction.status !== 'pending') {
+        if (transaction.status !== 'pending' && transaction.status !== status) {
+            // Only block if trying to change to a different status (e.g. approved -> pending)
+            // Allow approved -> approved to re-trigger user update logic
             return res.status(400).json({ message: 'Transaction already processed' });
         }
 
