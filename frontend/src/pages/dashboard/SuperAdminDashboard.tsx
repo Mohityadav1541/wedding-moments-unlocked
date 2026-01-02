@@ -285,6 +285,7 @@ const SuperAdminDashboard = () => {
                                             <th className="px-6 py-4">Plan</th>
                                             <th className="px-6 py-4">Amount</th>
                                             <th className="px-6 py-4">Status</th>
+                                            <th className="px-6 py-4 text-right">Action</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
@@ -296,11 +297,23 @@ const SuperAdminDashboard = () => {
                                                 <td className="px-6 py-4">₹{t.amount}</td>
                                                 <td className="px-6 py-4">
                                                     <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${t.status === 'approved'
-                                                            ? 'bg-green-100 text-green-800'
-                                                            : 'bg-red-100 text-red-800'
+                                                        ? 'bg-green-100 text-green-800'
+                                                        : 'bg-red-100 text-red-800'
                                                         }`}>
                                                         {t.status.charAt(0).toUpperCase() + t.status.slice(1)}
                                                     </div>
+                                                </td>
+                                                <td className="px-6 py-4 text-right">
+                                                    {t.status === 'approved' && (
+                                                        <Button
+                                                            size="sm"
+                                                            variant="outline"
+                                                            className="h-7 text-xs"
+                                                            onClick={() => handleApproveTransaction(t._id)}
+                                                        >
+                                                            Sync / Retry
+                                                        </Button>
+                                                    )}
                                                 </td>
                                             </tr>
                                         ))}
