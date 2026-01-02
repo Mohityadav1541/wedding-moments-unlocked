@@ -13,38 +13,52 @@ import { toast } from "sonner";
 
 const SuperAdminDashboard = () => {
     const [events, setEvents] = useState([]);
+    const [transactions, setTransactions] = useState([]);
 
     useEffect(() => {
-        fetchEvents();
+        fetchDashboardData();
     }, []);
 
-    const fetchEvents = async () => {
+    const fetchDashboardData = async () => {
         try {
-            const { data } = await api.get('/events'); // This endpoint needs to return all events for SuperAdmin
-            setEvents(data);
+            const eventsRes = await api.get('/events');
+            const transactionsRes = await api.get('/transactions');
+            setEvents(eventsRes.data);
+            setTransactions(transactionsRes.data);
         } catch (error) {
-            console.error("Error fetching events:", error);
+            console.error("Error fetching dashboard data:", error);
         }
     };
 
-    const handleApprovePayment = async (eventId: string) => {
+    const handleApproveTransaction = async (transactionId: string) => {
         try {
-            await api.put(`/events/${eventId}/confirm`);
-            toast.success("Event approved and activated!");
-            fetchEvents();
+            await api.put(`/transactions/${transactionId}/status`, { status: 'approved' });
+            toast.success("Transaction approved and user plan updated!");
+            fetchDashboardData();
         } catch (error) {
-            toast.error("Failed to approve event");
+            toast.error("Failed to approve transaction");
         }
     };
 
-    // Filter for events waiting for approval
-    const pendingPayments = events.filter((e: any) => e.paymentStatus === 'paid' && !e.superAdminConfirmed);
+    const handleRejectTransaction = async (transactionId: string) => {
+        if (!confirm("Are you sure you want to reject this transaction?")) return;
+        try {
+            await api.put(`/transactions/${transactionId}/status`, { status: 'rejected' });
+            toast.success("Transaction rejected.");
+            fetchDashboardData();
+        } catch (error) {
+            toast.error("Failed to reject transaction");
+        }
+    };
+
+    // Filter for pending transactions
+    const pendingTransactions = transactions.filter((t: any) => t.status === 'pending');
 
     // Demo data for Super Admin
     const stats = [
         { icon: Users, label: "Total Users", value: "1,234", trend: "+12% this month" },
         { icon: Building, label: "Total Events", value: events.length.toString(), trend: "+8% this week" },
-        { icon: TrendingUp, label: "Platform Revenue", value: "₹1,24,500", trend: "+15% this month" },
+        { icon: TrendingUp, label: "Platform Revenue", value: `₹${transactions.reduce((acc, t: any) => acc + (t.status === 'approved' ? t.amount : 0), 0)}`, trend: "+15% this month" },
         { icon: Settings, label: "System Status", value: "Healthy", trend: "All services online" },
     ];
 
@@ -92,7 +106,7 @@ const SuperAdminDashboard = () => {
                 {/* Pending Payments Section */}
                 <div className="mb-8">
                     <h2 className="font-display text-xl font-bold mb-4">Pending Payment Approvals</h2>
-                    {pendingPayments.length === 0 ? (
+                    {pendingTransactions.length === 0 ? (
                         <div className="bg-card rounded-xl p-8 border border-border/50 text-center text-muted-foreground">
                             No pending payments to review.
                         </div>
@@ -102,26 +116,30 @@ const SuperAdminDashboard = () => {
                                 <table className="w-full text-sm text-left">
                                     <thead className="bg-muted/50 text-muted-foreground font-medium uppercase text-xs">
                                         <tr>
-                                            <th className="px-6 py-4">Event Name</th>
+                                            <th className="px-6 py-4">User</th>
                                             <th className="px-6 py-4">Date</th>
-                                            <th className="px-6 py-4">Package/Amount</th>
+                                            <th className="px-6 py-4">Plan/Amount</th>
                                             <th className="px-6 py-4">Proof</th>
                                             <th className="px-6 py-4 text-right">Action</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
-                                        {pendingPayments.map((event: any) => (
-                                            <tr key={event._id} className="hover:bg-muted/30">
-                                                <td className="px-6 py-4 font-medium text-foreground">{event.name}</td>
-                                                <td className="px-6 py-4">{new Date(event.date).toLocaleDateString()}</td>
+                                        {pendingTransactions.map((t: any) => (
+                                            <tr key={t._id} className="hover:bg-muted/30">
+                                                <td className="px-6 py-4 font-medium text-foreground">
+                                                    <div>{t.user?.name || 'Unknown'}</div>
+                                                    <div className="text-xs text-muted-foreground">{t.user?.email}</div>
+                                                </td>
+                                                <td className="px-6 py-4">{new Date(t.createdAt).toLocaleDateString()}</td>
                                                 <td className="px-6 py-4">
-                                                    <div>{event.package}</div>
-                                                    <div className="font-bold">₹{event.price}</div>
+                                                    <div>{t.plan}</div>
+                                                    <div className="font-bold">₹{t.amount}</div>
+                                                    <div className="text-xs text-muted-foreground">UPI: {t.upiTransactionId}</div>
                                                 </td>
                                                 <td className="px-6 py-4">
-                                                    {event.paymentScreenshot ? (
+                                                    {t.screenshot ? (
                                                         <a
-                                                            href={event.paymentScreenshot.startsWith('http') ? event.paymentScreenshot : `${import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000'}/${event.paymentScreenshot.replace(/\\/g, "/")}`}
+                                                            href={t.screenshot}
                                                             target="_blank"
                                                             rel="noreferrer"
                                                             className="text-blue-600 hover:underline text-xs"
@@ -132,13 +150,20 @@ const SuperAdminDashboard = () => {
                                                         <span className="text-muted-foreground text-xs">No screenshot</span>
                                                     )}
                                                 </td>
-                                                <td className="px-6 py-4 text-right">
+                                                <td className="px-6 py-4 text-right space-x-2">
                                                     <Button
                                                         size="sm"
                                                         className="bg-green-600 hover:bg-green-700 text-white"
-                                                        onClick={() => handleApprovePayment(event._id)}
+                                                        onClick={() => handleApproveTransaction(t._id)}
                                                     >
                                                         Approve
+                                                    </Button>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="destructive"
+                                                        onClick={() => handleRejectTransaction(t._id)}
+                                                    >
+                                                        Reject
                                                     </Button>
                                                 </td>
                                             </tr>
@@ -190,7 +215,7 @@ const SuperAdminDashboard = () => {
                                                             try {
                                                                 await api.delete(`/events/${event._id}`);
                                                                 toast.success("Event and photos deleted successfully");
-                                                                fetchEvents();
+                                                                fetchDashboardData();
                                                             } catch (error) {
                                                                 console.error(error);
                                                                 toast.error("Failed to delete event");
