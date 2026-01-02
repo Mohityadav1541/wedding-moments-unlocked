@@ -56,6 +56,7 @@ const EventPage = () => {
   };
 
   // Helper to convert base64/dataURL to Blob for upload
+  // kept for fallback or other uses, though detectAndCropFace returns a blob now.
   const dataURItoBlob = (dataURI: string) => {
     try {
       if (!dataURI || !dataURI.includes(',')) return null;
@@ -70,7 +71,7 @@ const EventPage = () => {
       return new Blob([ab], { type: mimeString });
     } catch (e) {
       console.error("Data URI conversion failed", e);
-      return null; // Return null on failure
+      return null;
     }
   };
 
@@ -78,23 +79,28 @@ const EventPage = () => {
     if (!selfieUrl || !event) return;
 
     setIsProcessing(true);
+    toast.info("Analyzing your selfie...");
 
     try {
-      const formData = new FormData();
-      const blob = dataURItoBlob(selfieUrl);
-
-      if (!blob) {
-        toast.error("Invalid image data. Please retake the selfie.");
-        setIsProcessing(false);
-        return;
+      // Step 1: Client-side Face Detection & Cropping
+      let blob: Blob | null = null;
+      try {
+        // Dynamically import to ensure it works with the hook
+        const { detectAndCropFace } = await import("@/utils/faceDetection");
+        blob = await detectAndCropFace(selfieUrl);
+      } catch (err: any) {
+        console.warn("Face detection failed, falling back to full image upload:", err);
+        // Fallback: Upload full image if detection fails
+        blob = dataURItoBlob(selfieUrl);
+        if (!blob) throw new Error("Could not process image");
       }
 
+      const formData = new FormData();
       formData.append('image', blob, 'selfie.jpg');
       formData.append('eventId', event._id);
 
       const { data } = await api.post('/photos/search', formData);
 
-      // Data should be array of photos with { url, downloadUrl }
       setMatchedPhotos(data);
       if (data.length === 0) {
         toast.info("No matching photos found with high confidence.");
@@ -103,11 +109,10 @@ const EventPage = () => {
     } catch (error: any) {
       console.error("AI Search Failed:", error);
       if (error.response?.status === 500) {
-        // Show actual server error if available
         const serverMessage = error.response.data?.message;
         toast.error(serverMessage || "Server error. Please try again in 1 minute.");
       } else {
-        toast.error("Failed to find photos. Please try again.");
+        toast.error(error.message || "Failed to find photos. Please try again.");
       }
     } finally {
       setIsProcessing(false);
