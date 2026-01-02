@@ -173,9 +173,10 @@ const ManageEvent = () => {
                                             if (uploadedCount % 3 === 0) {
                                                 toast.info(`Uploaded ${uploadedCount}/${totalFiles}...`);
                                             }
-                                        } catch (error) {
+                                        } catch (error: any) {
                                             console.error(`Failed to upload file ${i + 1}:`, error);
-                                            toast.error(`Failed to upload image ${i + 1}`);
+                                            const serverMsg = error.response?.data?.message || error.message;
+                                            toast.error(`Image ${i + 1}: ${serverMsg}`);
                                         }
                                     }
 
