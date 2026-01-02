@@ -5,6 +5,7 @@ import { Check, Crown, Zap, Shield, Camera, Star } from "lucide-react";
 import { toast } from "sonner";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import api from "@/lib/api";
 
 const Packages = () => {
     const navigate = useNavigate();
@@ -28,50 +29,32 @@ const Packages = () => {
         setIsPaymentModalOpen(true);
     };
 
+
+
     const handlePaymentSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
 
         try {
-            const token = localStorage.getItem('token');
-            if (!token) {
-                toast.error("Please login first");
-                navigate('/auth');
-                return;
-            }
-
             // Clean price string (remove comma and currency symbol)
             const amount = parseInt(selectedPlan.price.replace(/[^0-9]/g, ''));
 
-            const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/transactions`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                    plan: selectedPlan.name,
-                    amount: amount,
-                    upiTransactionId: formData.upiTransactionId,
-                    // Mobile is not stored in transaction model directly in plan, maybe save to user or just log?
-                    // For now sending but backend might ignore unless we update controller to update user phone.
-                })
+            // api instance handles token automatically from localStorage 'user' object
+            const response = await api.post('/transactions', {
+                plan: selectedPlan.name,
+                amount: amount,
+                upiTransactionId: formData.upiTransactionId,
             });
 
-            const data = await response.json();
+            // axios response.data is the actual data, response.status check not needed like fetch .ok
+            toast.success("Payment request submitted! Admin will verify and approve shortly.");
+            setIsPaymentModalOpen(false);
+            setFormData({ mobile: '', upiTransactionId: '', screenshot: '' });
+            navigate('/dashboard');
 
-            if (response.ok) {
-                toast.success("Payment request submitted! Admin will verify and approve shortly.");
-                setIsPaymentModalOpen(false);
-                setFormData({ mobile: '', upiTransactionId: '', screenshot: '' });
-                // Optional: Update user context to show pending status
-                navigate('/dashboard');
-            } else {
-                toast.error(data.message || "Payment submission failed");
-            }
-        } catch (error) {
+        } catch (error: any) {
             console.error("Payment Error:", error);
-            toast.error("Network error. Please try again.");
+            toast.error(error.response?.data?.message || "Payment submission failed. Please try again.");
         } finally {
             setIsSubmitting(false);
         }
