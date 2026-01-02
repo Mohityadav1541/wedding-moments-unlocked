@@ -28,6 +28,13 @@ export const loginUser = async (req, res) => {
             name: user.name,
             email: user.email,
             role: user.role,
+            subscription: {
+                status: user.subscriptionStatus,
+                plan: user.currentPlan,
+                quota: user.eventQuota,
+                expiresAt: user.planExpiresAt,
+                studioName: user.studioName
+            },
             token: generateToken(user._id),
         });
     } else {
@@ -62,8 +69,14 @@ export const registerUser = async (req, res) => {
             _id: user._id,
             name: user.name,
             email: user.email,
+            email: user.email,
             role: user.role,
             studioName: user.studioName,
+            subscription: {
+                status: user.subscriptionStatus,
+                plan: user.currentPlan,
+                quota: user.eventQuota
+            },
             token: generateToken(user._id),
         });
     } else {

@@ -11,6 +11,30 @@ import { toast } from "sonner";
 const CreateEvent = () => {
     const navigate = useNavigate();
     const [loading, setLoading] = useState(false);
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+
+    // Check quota logic
+    const hasActiveSubscription = user.subscription?.status === 'active' && new Date(user.subscription?.expiresAt) > new Date();
+    const hasQuota = (user.subscription?.quota || 0) > 0;
+
+    // Superadmin bypass
+    const canCreate = user.role === 'superadmin' || hasActiveSubscription || hasQuota;
+
+    if (!canCreate) {
+        return (
+            <DashboardLayout userRole="admin">
+                <div className="p-8 max-w-2xl mx-auto text-center">
+                    <h2 className="text-2xl font-bold mb-4">Subscription Required</h2>
+                    <p className="text-muted-foreground mb-6">
+                        You do not have an active subscription or event quota. Please purchase a package to create new events.
+                    </p>
+                    <Button onClick={() => navigate('/packages')}>
+                        View Packages
+                    </Button>
+                </div>
+            </DashboardLayout>
+        );
+    }
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -21,21 +45,29 @@ const CreateEvent = () => {
             name: formData.get("name"),
             date: formData.get("date"),
             location: formData.get("location"),
-            selectedPackage: formData.get("selectedPackage"),
+            // Package is now determined by user subscription on backend
         };
-        console.log("Submitting Event Data:", data);
 
         try {
             const res = await api.post("/events", data);
-            toast.success("Event created! Please complete payment.");
-            navigate(`/dashboard/events/${res.data._id}`); // Redirect to manage page for payment
-        } catch (error: any) {
-            console.error("Full Event Creation Error:", error);
-            if (error.response) {
-                console.error("Error Response Data:", error.response.data);
-                console.error("Error Response Status:", error.response.status);
+            toast.success("Event created successfully!");
+
+            // Update local storage quota if not unlimited
+            if (user.role !== 'superadmin' && !hasActiveSubscription && hasQuota) {
+                const updatedUser = { ...user, subscription: { ...user.subscription, quota: user.subscription.quota - 1 } };
+                localStorage.setItem('user', JSON.stringify(updatedUser));
             }
-            toast.error(error.response?.data?.message || "Failed to create event");
+
+            navigate(`/dashboard/events/${res.data._id}`);
+        } catch (error: any) {
+            // ... error handling
+            console.error("Full Event Creation Error:", error);
+            if (error.response?.data?.code === 'SUBSCRIPTION_REQUIRED') {
+                toast.error("Quota exceeded. Please upgrade.");
+                navigate('/packages');
+            } else {
+                toast.error(error.response?.data?.message || "Failed to create event");
+            }
         } finally {
             setLoading(false);
         }
@@ -54,6 +86,16 @@ const CreateEvent = () => {
                 <div className="bg-card rounded-xl border border-border/50 shadow-card p-6">
                     <h1 className="font-display text-2xl font-bold mb-6">Create New Event</h1>
 
+                    {/* Quota Info */}
+                    <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 mb-6 flex justify-between items-center">
+                        <span className="text-sm font-medium text-primary">
+                            Current Plan: {user.subscription?.plan || 'None'}
+                        </span>
+                        <span className="text-xs bg-primary text-white px-2 py-1 rounded-full">
+                            {hasActiveSubscription ? 'Unlimited Events' : `Events Left: ${user.subscription?.quota || 0}`}
+                        </span>
+                    </div>
+
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div className="space-y-2">
                             <Label htmlFor="name">Event Name</Label>
@@ -70,36 +112,10 @@ const CreateEvent = () => {
                             <Input id="location" name="location" placeholder="e.g. Grand Hotel, Mumbai" />
                         </div>
 
-                        <div className="space-y-4">
-                            <Label>Select Package</Label>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <label className="cursor-pointer relative">
-                                    <input type="radio" name="selectedPackage" value="Standard" className="peer sr-only" defaultChecked />
-                                    <div className="p-4 rounded-xl border-2 border-border peer-checked:border-primary peer-checked:bg-primary/5 hover:border-primary/50 transition-all">
-                                        <div className="font-display font-bold text-lg mb-1">Standard Wedding</div>
-                                        <div className="font-body text-primary font-bold mb-2">₹1499</div>
-                                        <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
-                                            <li>15 GB Storage</li>
-                                            <li>Photographer Watermark</li>
-                                        </ul>
-                                    </div>
-                                </label>
-                                <label className="cursor-pointer relative">
-                                    <input type="radio" name="selectedPackage" value="Premium" className="peer sr-only" />
-                                    <div className="p-4 rounded-xl border-2 border-border peer-checked:border-primary peer-checked:bg-primary/5 hover:border-primary/50 transition-all">
-                                        <div className="font-display font-bold text-lg mb-1">Premium Wedding</div>
-                                        <div className="font-body text-primary font-bold mb-2">₹2999</div>
-                                        <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
-                                            <li>25 GB Storage</li>
-                                            <li>Photographer Watermark</li>
-                                        </ul>
-                                    </div>
-                                </label>
-                            </div>
-                        </div>
+                        {/* Package selection removed as it's subscription based now */}
 
                         <Button type="submit" className="w-full" disabled={loading}>
-                            {loading ? "Creating..." : "Create Event & Proceed to Payment"}
+                            {loading ? "Creating..." : "Create Event"}
                         </Button>
                     </form>
                 </div>

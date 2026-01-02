@@ -36,6 +36,35 @@ const userSchema = new mongoose.Schema({
         type: String,
         required: false,
     },
+    // Subscription Fields
+    subscriptionStatus: {
+        type: String,
+        enum: ['inactive', 'active', 'expired'],
+        default: 'inactive'
+    },
+    currentPlan: {
+        type: String,
+        enum: ['None', 'Basic', 'Standard', 'Premium', 'Studio Monthly', 'Studio Yearly'],
+        default: 'None'
+    },
+    planExpiresAt: {
+        type: Date
+    },
+    eventQuota: {
+        type: Number,
+        default: 0 // For per-event plans
+    },
+    photoLimit: {
+        type: Number,
+        default: 0
+    },
+    storageLimit: {
+        type: Number, // In days
+        default: 0
+    },
+    upiId: {
+        type: String // For receiving payments (studio) or verification (user)
+    }
 }, {
     timestamps: true,
 });

@@ -18,6 +18,7 @@ import eventRoutes from './src/routes/eventRoutes.js';
 import photoRoutes from './src/routes/photoRoutes.js';
 import userRoutes from './src/routes/userRoutes.js';
 import landingContentRoutes from './src/routes/landingContentRoutes.js';
+import transactionRoutes from './src/routes/transactionRoutes.js';
 
 dotenv.config();
 
@@ -36,6 +37,7 @@ app.use('/api/events', eventRoutes);
 app.use('/api/photos', photoRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/content', landingContentRoutes);
+app.use('/api/transactions', transactionRoutes);
 console.log('Registered /api/content route');
 
 app.get('/', (req, res) => {

@@ -42,6 +42,17 @@ export const addPhoto = async (req, res) => {
             return res.status(401).json({ message: 'Not authorized' });
         }
 
+        // Check Photo Limit (Optimization: do this before AI processing)
+        const currentPhotoCount = await Photo.countDocuments({ event: eventId });
+        const user = await User.findById(req.user._id);
+
+        // Use user's limit or fallback to a reasonable default if not set
+        const limit = user.photoLimit || 2000;
+
+        if (req.user.role !== 'superadmin' && currentPhotoCount >= limit) {
+            return res.status(403).json({ message: `Photo limit reached (${limit}). Upgrade your plan to upload more.` });
+        }
+
         // --- AI PROCESS START ---
         // Compute ALL face descriptors (detects multiple people) using External Python API
         // This offloads heavy processing from our Node server

@@ -30,24 +30,39 @@ export const getEvents = async (req, res) => {
 export const createEvent = async (req, res) => {
     const { name, date, location, selectedPackage } = req.body;
 
-    // Determine price based on package
-    let price = 1499; // Standard default
-    if (selectedPackage === 'Premium') {
-        price = 2999;
-    }
-
     try {
         const user = await User.findById(req.user._id);
+
+        // 1. Check Subscription Status
+        const now = new Date();
+        const hasActiveSubscription = user.subscriptionStatus === 'active' && user.planExpiresAt && new Date(user.planExpiresAt) > now;
+        const hasQuota = user.eventQuota > 0;
+
+        // "Studio Monthly" and "Studio Yearly" are unlimited (handled by keeping quota high or checking plan name)
+        // But per our logic, we gave them 9999 quota.
+        // "Basic", "Standard", "Premium" are per-event (quota based).
+
+        // If user has NO active subscription AND NO quota, they cannot create event.
+        // (Unless they are SuperAdmin)
+        if (req.user.role !== 'superadmin') {
+            if (!hasActiveSubscription && !hasQuota) {
+                return res.status(403).json({
+                    message: 'Subscription expired or no event quota available. Please recharge.',
+                    code: 'SUBSCRIPTION_REQUIRED'
+                });
+            }
+        }
 
         const event = new Event({
             user: req.user._id,
             name,
             date,
+            date,
             location,
-            package: selectedPackage || 'Standard',
-            price,
-            paymentStatus: 'pending', // Default
-            superAdminConfirmed: false,
+            package: user.currentPlan || 'None', // Event inherits user's plan at time of creation
+            price: 0, // Price handled via external subscription now
+            paymentStatus: 'paid', // Managed via subscription
+            superAdminConfirmed: true, // Auto-confirm as subscription is pre-paid
             features: {
                 watermarkEnabled: true,
                 watermarkText: user.studioName || 'Wedding Moments AI',
@@ -57,6 +72,13 @@ export const createEvent = async (req, res) => {
         });
 
         const createdEvent = await event.save();
+
+        // Decrement Quota if applicable
+        if (req.user.role !== 'superadmin' && user.eventQuota > 0) {
+            user.eventQuota = user.eventQuota - 1;
+            await user.save();
+        }
+
         res.status(201).json(createdEvent);
     } catch (error) {
         console.error("Create Event Error:", error);
