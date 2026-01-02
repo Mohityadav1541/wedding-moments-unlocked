@@ -101,3 +101,30 @@ export const deleteUser = async (req, res) => {
         res.status(500).json({ message: 'Server Error' });
     }
 };
+// @desc    Get current user profile
+// @route   GET /api/users/profile
+// @access  Private
+export const getUserProfile = async (req, res) => {
+    try {
+        const user = await User.findById(req.user._id);
+
+        if (user) {
+            res.json({
+                _id: user._id,
+                name: user.name,
+                email: user.email,
+                role: user.role,
+                subscription: {
+                    status: user.subscriptionStatus,
+                    plan: user.currentPlan,
+                    expiresAt: user.planExpiresAt,
+                    quota: user.eventQuota
+                }
+            });
+        } else {
+            res.status(404).json({ message: 'User not found' });
+        }
+    } catch (error) {
+        res.status(500).json({ message: 'Server Error' });
+    }
+};
