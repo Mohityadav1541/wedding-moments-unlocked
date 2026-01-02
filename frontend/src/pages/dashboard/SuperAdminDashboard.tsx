@@ -14,6 +14,12 @@ import { toast } from "sonner";
 const SuperAdminDashboard = () => {
     const [events, setEvents] = useState([]);
     const [transactions, setTransactions] = useState([]);
+    const [stats, setStats] = useState([
+        { icon: Users, label: "Total Users", value: "0", trend: "+0% this month" },
+        { icon: Building, label: "Total Events", value: "0", trend: "+0% this week" },
+        { icon: TrendingUp, label: "Platform Revenue", value: "₹0", trend: "+0% this month" },
+        { icon: Settings, label: "System Status", value: "Healthy", trend: "All services online" },
+    ]);
 
     useEffect(() => {
         fetchDashboardData();
@@ -21,10 +27,31 @@ const SuperAdminDashboard = () => {
 
     const fetchDashboardData = async () => {
         try {
-            const eventsRes = await api.get('/events');
-            const transactionsRes = await api.get('/transactions');
-            setEvents(eventsRes.data);
-            setTransactions(transactionsRes.data);
+            const [eventsRes, transactionsRes, usersRes] = await Promise.all([
+                api.get('/events'),
+                api.get('/transactions'),
+                api.get('/users/photographers')
+            ]);
+
+            const eventsData = eventsRes.data;
+            const transactionsData = transactionsRes.data;
+            const usersData = usersRes.data;
+
+            setEvents(eventsData);
+            setTransactions(transactionsData);
+
+            // Calculate Revenue (Approved transactions)
+            const revenue = transactionsData.reduce((acc: number, t: any) =>
+                acc + (t.status === 'approved' ? t.amount : 0), 0
+            );
+
+            setStats([
+                { icon: Users, label: "Total Photographers", value: usersData.length.toString(), trend: "Registered" },
+                { icon: Building, label: "Total Events", value: eventsData.length.toString(), trend: "Created" },
+                { icon: TrendingUp, label: "Platform Revenue", value: `₹${revenue.toLocaleString()}`, trend: "Total Earnings" },
+                { icon: Settings, label: "System Status", value: "Healthy", trend: "All services online" },
+            ]);
+
         } catch (error) {
             console.error("Error fetching dashboard data:", error);
         }
@@ -58,13 +85,10 @@ const SuperAdminDashboard = () => {
     // Filter for pending transactions
     const pendingTransactions = transactions.filter((t: any) => t.status === 'pending');
 
-    // Demo data for Super Admin
-    const stats = [
-        { icon: Users, label: "Total Users", value: "1,234", trend: "+12% this month" },
-        { icon: Building, label: "Total Events", value: events.length.toString(), trend: "+8% this week" },
-        { icon: TrendingUp, label: "Platform Revenue", value: `₹${transactions.reduce((acc, t: any) => acc + (t.status === 'approved' ? t.amount : 0), 0)}`, trend: "+15% this month" },
-        { icon: Settings, label: "System Status", value: "Healthy", trend: "All services online" },
-    ];
+    // Recent Approved Transactions (Last 5)
+    const recentTransactions = transactions
+        .filter((t: any) => t.status !== 'pending')
+        .slice(0, 5);
 
     return (
         <DashboardLayout userRole="superadmin">
@@ -246,6 +270,47 @@ const SuperAdminDashboard = () => {
                         </>
                     )}
                 </div>
+
+                {/* Recent Activity Section */}
+                {recentTransactions.length > 0 && (
+                    <div className="mb-8">
+                        <h2 className="font-display text-xl font-bold mb-4">Recent Payment Activity</h2>
+                        <div className="bg-card rounded-xl border border-border/50 overflow-hidden">
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-sm text-left">
+                                    <thead className="bg-muted/50 text-muted-foreground font-medium uppercase text-xs">
+                                        <tr>
+                                            <th className="px-6 py-4">User</th>
+                                            <th className="px-6 py-4">Date</th>
+                                            <th className="px-6 py-4">Plan</th>
+                                            <th className="px-6 py-4">Amount</th>
+                                            <th className="px-6 py-4">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-border">
+                                        {recentTransactions.map((t: any) => (
+                                            <tr key={t._id} className="hover:bg-muted/10">
+                                                <td className="px-6 py-4">{t.user?.name || 'Unknown'}</td>
+                                                <td className="px-6 py-4">{new Date(t.updatedAt || t.createdAt).toLocaleDateString()}</td>
+                                                <td className="px-6 py-4">{t.plan}</td>
+                                                <td className="px-6 py-4">₹{t.amount}</td>
+                                                <td className="px-6 py-4">
+                                                    <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${t.status === 'approved'
+                                                            ? 'bg-green-100 text-green-800'
+                                                            : 'bg-red-100 text-red-800'
+                                                        }`}>
+                                                        {t.status.charAt(0).toUpperCase() + t.status.slice(1)}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {/* All Events Section */}
                 <div className="mb-8">
                     <h2 className="font-display text-xl font-bold mb-4">All Events Management</h2>
