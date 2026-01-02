@@ -31,8 +31,8 @@ const eventSchema = new mongoose.Schema({
     // Payment & Package Details
     package: {
         type: String,
-        enum: ['Standard', 'Premium'],
-        required: true,
+        enum: ['Basic', 'Standard', 'Premium', 'Studio Monthly', 'Studio Yearly'],
+        required: false,
         default: 'Standard'
     },
     price: {
