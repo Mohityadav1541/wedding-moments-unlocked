@@ -61,7 +61,7 @@ export const createEvent = async (req, res) => {
             location,
             package: user.currentPlan || 'None', // Event inherits user's plan at time of creation
             price: 0, // Price handled via external subscription now
-            paymentStatus: 'paid', // Managed via subscription
+            paymentStatus: 'confirmed', // Auto-confirm as subscription/quota is used
             superAdminConfirmed: true, // Auto-confirm as subscription is pre-paid
             features: {
                 watermarkEnabled: true,
