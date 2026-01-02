@@ -237,15 +237,15 @@ const Packages = () => {
             {/* Payment Modal */}
             {isPaymentModalOpen && selectedPlan && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-                    <div className="bg-card w-full max-w-md rounded-2xl shadow-2xl overflow-hidden border border-border">
-                        <div className="p-6 border-b border-border bg-muted/30">
+                    <div className="bg-card w-full max-w-md max-h-[90vh] flex flex-col rounded-2xl shadow-2xl border border-border">
+                        <div className="p-6 border-b border-border bg-muted/30 flex-shrink-0">
                             <h3 className="font-display text-xl font-bold">Complete Your Purchase</h3>
                             <p className="text-sm text-muted-foreground mt-1">
                                 You selected existing <strong>{selectedPlan.name}</strong> plan for <strong>{selectedPlan.price}</strong>.
                             </p>
                         </div>
 
-                        <div className="p-6 space-y-6">
+                        <div className="p-6 space-y-6 overflow-y-auto">
                             {/* UPI Details */}
                             {/* UPI Details */}
                             <div className="bg-primary/5 p-4 rounded-lg border border-primary/20 flex flex-col items-center text-center">
