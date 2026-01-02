@@ -57,15 +57,16 @@ export const updateTransactionStatus = async (req, res) => {
     const { status } = req.body; // 'approved' or 'rejected'
 
     try {
+        console.log(`[Transaction] Processing approval for ID: ${req.params.id} with status: ${status}`);
         const transaction = await Transaction.findById(req.params.id);
 
         if (!transaction) {
+            console.error(`[Transaction] Not Found: ${req.params.id}`);
             return res.status(404).json({ message: 'Transaction not found' });
         }
 
         if (transaction.status !== 'pending' && transaction.status !== status) {
-            // Only block if trying to change to a different status (e.g. approved -> pending)
-            // Allow approved -> approved to re-trigger user update logic
+            console.warn(`[Transaction] Already processed: ${transaction.status}`);
             return res.status(400).json({ message: 'Transaction already processed' });
         }
 
@@ -74,12 +75,17 @@ export const updateTransactionStatus = async (req, res) => {
         transaction.approvedAt = Date.now();
 
         await transaction.save();
+        console.log(`[Transaction] Saved status: ${status}`);
 
         if (status === 'approved') {
+            console.log(`[Transaction] Fetching user: ${transaction.user}`);
             const user = await User.findById(transaction.user);
             if (user) {
+                console.log(`[Transaction] User found: ${user.email} (Current Plan: ${user.currentPlan})`);
+
                 // Update User Plan based on transaction
                 const planDetails = getPlanDetails(transaction.plan);
+                console.log(`[Transaction] Plan Details for '${transaction.plan}':`, planDetails);
 
                 user.subscriptionStatus = 'active';
                 user.currentPlan = transaction.plan;
@@ -88,30 +94,28 @@ export const updateTransactionStatus = async (req, res) => {
                 const now = new Date();
                 if (planDetails.period === 'month') {
                     user.planExpiresAt = new Date(now.setMonth(now.getMonth() + 1));
-                    user.eventQuota = 9999; // Unlimited effectively
+                    user.eventQuota = 9999;
                 } else if (planDetails.period === 'year') {
                     user.planExpiresAt = new Date(now.setFullYear(now.getFullYear() + 1));
                     user.eventQuota = 9999;
                 } else {
-                    // Per Event Packages
-                    user.planExpiresAt = null; // No time expiry for quota? Or maybe 1 year? Let's say indefinite quota.
-                    // Add to existing quota or reset? Usually add.
-                    user.eventQuota = (user.eventQuota || 0) + 1; // "One Event Package" implies 1 event.
-                    // Or if "Basic" gives 2000 photos, maybe it allows 1 event with 2000 photos.
-                    // The user said "if he choose one event package than only he have able to create an event"
-                    // So we increment quota.
+                    user.planExpiresAt = null;
+                    user.eventQuota = (user.eventQuota || 0) + 1;
                 }
 
                 user.photoLimit = planDetails.photoLimit;
                 user.storageLimit = planDetails.storageLimit;
 
-                await user.save();
+                const updatedUser = await user.save();
+                console.log(`[Transaction] User updated successfully. New Status: ${updatedUser.subscriptionStatus}, Quota: ${updatedUser.eventQuota}`);
+            } else {
+                console.error(`[Transaction] User NOT found for ID: ${transaction.user}`);
             }
         }
 
         res.json(transaction);
     } catch (error) {
-        console.error("Error approving transaction:", error);
+        console.error("[Transaction] Error approving transaction:", error);
         res.status(500).json({ message: error.message || 'Server Error' });
     }
 };
