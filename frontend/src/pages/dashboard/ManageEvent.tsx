@@ -157,38 +157,41 @@ const ManageEvent = () => {
                             id="photo-upload"
                             onChange={async (e) => {
                                 const files = e.target.files;
-                                if (files && files.length > 0) {
-                                    const totalFiles = files.length;
-                                    let uploadedCount = 0;
-                                    toast.info(`Starting upload of ${totalFiles} photos...`);
+                                const totalFiles = files.length;
+                                let uploadedCount = 0;
+                                toast.info(`Starting upload of ${totalFiles} photos...`);
 
-                                    for (let i = 0; i < totalFiles; i++) {
+                                const BATCH_SIZE = 5;
+                                const fileArray = Array.from(files);
+
+                                for (let i = 0; i < fileArray.length; i += BATCH_SIZE) {
+                                    const batch = fileArray.slice(i, i + BATCH_SIZE);
+                                    await Promise.all(batch.map(async (file, index) => {
+                                        const fileIndex = i + index;
                                         const formData = new FormData();
                                         formData.append('eventId', event._id);
-                                        formData.append('image', files[i]);
+                                        formData.append('image', file);
 
                                         try {
                                             await api.post('/photos', formData);
                                             uploadedCount++;
                                             setUploadProgress({ current: uploadedCount, total: totalFiles });
-                                            if (uploadedCount % 3 === 0) {
-                                                toast.info(`Uploaded ${uploadedCount}/${totalFiles}...`);
-                                            }
                                         } catch (error: any) {
-                                            console.error(`Failed to upload file ${i + 1}:`, error);
+                                            console.error(`Failed to upload file ${file.name}:`, error);
                                             const serverMsg = error.response?.data?.message || error.message;
                                             setUploadError({
-                                                file: files[i].name,
+                                                file: file.name,
                                                 msg: serverMsg,
                                                 fullError: error.response?.data || error
                                             });
-                                            toast.error(`Image ${i + 1}: ${serverMsg}`);
+                                            toast.error(`Image ${file.name}: ${serverMsg}`);
                                         }
-                                    }
-
-                                    toast.success(`Upload complete! ${uploadedCount}/${totalFiles} photos uploaded.`);
-                                    fetchPhotos();
+                                    }));
                                 }
+
+                                toast.success(`Upload complete! ${uploadedCount}/${totalFiles} photos uploaded.`);
+                                fetchPhotos();
+                            }
                             }}
                         />
                         <Button variant="rose" className="gap-2" onClick={() => document.getElementById('photo-upload')?.click()} disabled={uploadProgress.total > 0 && uploadProgress.current < uploadProgress.total}>

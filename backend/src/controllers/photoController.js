@@ -63,29 +63,38 @@ export const addPhoto = async (req, res) => {
             return res.status(403).json({ message: `Photo limit reached (${limit}). Upgrade your plan to upload more.` });
         }
 
-        // --- AI PROCESS START ---
-        // Compute ALL face descriptors (detects multiple people) using External Python API
-        // This offloads heavy processing from our Node server
-        console.log(`[Photo] Starting AI processing for: ${url}`);
-        let descriptors = [];
-        try {
-            descriptors = await getAllFaceDescriptors(url);
-            console.log(`[Photo] AI Processing complete. Descriptors found: ${descriptors ? descriptors.length : 0}`);
-        } catch (aiError) {
-            console.error("[Photo] AI Service Failed (Soft Fail):", aiError.message);
-            // Proceed without descriptors - don't block upload
-        }
-        // --- AI PROCESS END ---
-
+        // Create photo entry first (Fast response)
         const photo = new Photo({
             event: eventId,
             url,
-            faceDescriptors: descriptors || []
+            faceDescriptors: [] // Will be updated asynchronously
         });
 
         const createdPhoto = await photo.save();
-        console.log(`[Photo] Saved to DB: ${createdPhoto._id}`);
+        console.log(`[Photo] Saved to DB (Initial): ${createdPhoto._id}`);
+
+        // Respond to client immediately
         res.status(201).json(createdPhoto);
+
+        // --- BACKGROUND AI PROCESS START ---
+        // Fire and forget (but log errors)
+        (async () => {
+            console.log(`[Photo] Starting background AI processing for: ${createdPhoto._id}`);
+            try {
+                const descriptors = await getAllFaceDescriptors(url);
+                console.log(`[Photo] AI Processing complete. Descriptors found: ${descriptors ? descriptors.length : 0}`);
+
+                if (descriptors && descriptors.length > 0) {
+                    createdPhoto.faceDescriptors = descriptors;
+                    await createdPhoto.save();
+                    console.log(`[Photo] Updated DB with descriptors for: ${createdPhoto._id}`);
+                }
+            } catch (aiError) {
+                console.error("[Photo] Background AI Service Failed:", aiError.message);
+                // System continues, photo exists but not searchable by face yet
+            }
+        })();
+        // --- BACKGROUND AI PROCESS END ---
     } catch (error) {
         console.error("Add Photo Error:", error);
         res.status(400).json({ message: error.message || 'Invalid data or AI processing failed' });
