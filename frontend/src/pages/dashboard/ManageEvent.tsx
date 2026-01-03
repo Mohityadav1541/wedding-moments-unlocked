@@ -161,24 +161,30 @@ const ManageEvent = () => {
                                 let uploadedCount = 0;
                                 toast.info(`Starting upload of ${totalFiles} photos...`);
 
-                                const BATCH_SIZE = 5;
+                                const BATCH_SIZE = 3;
                                 const fileArray = Array.from(files);
 
                                 for (let i = 0; i < fileArray.length; i += BATCH_SIZE) {
                                     const batch = fileArray.slice(i, i + BATCH_SIZE);
                                     await Promise.all(batch.map(async (file, index) => {
-                                        const fileIndex = i + index;
-                                        const formData = new FormData();
-                                        formData.append('eventId', event._id);
-                                        formData.append('image', file);
+                                        // Update toast to show what's happening
+                                        // const currentFileNum = i + index + 1;
+                                        // toast.loading(`Compressing & Uploading ${currentFileNum}/${totalFiles}...`, { id: 'upload-toast' });
 
                                         try {
+                                            // 1. Compress Image
+                                            const compressedFile = await compressImage(file, 0.7, 1600); // Aggressive compression for speed
+
+                                            const formData = new FormData();
+                                            formData.append('eventId', event._id);
+                                            formData.append('image', compressedFile);
+
                                             await api.post('/photos', formData);
                                             uploadedCount++;
                                             setUploadProgress({ current: uploadedCount, total: totalFiles });
                                         } catch (error: any) {
                                             console.error(`Failed to upload file ${file.name}:`, error);
-                                            const serverMsg = error.response?.data?.message || error.message;
+                                            const serverMsg = error.response?.data?.message || "Upload timed out or failed";
                                             setUploadError({
                                                 file: file.name,
                                                 msg: serverMsg,

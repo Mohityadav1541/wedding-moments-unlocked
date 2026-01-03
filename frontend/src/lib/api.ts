@@ -2,7 +2,7 @@ import axios from 'axios';
 
 const api = axios.create({
     baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
-    timeout: 60000, // 60s timeout for AI operations
+    timeout: 120000, // 120s timeout for slower network/large files
 });
 
 // Add interceptor to include token in headers if it exists
