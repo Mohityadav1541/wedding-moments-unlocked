@@ -30,7 +30,7 @@ export const getFaceDescriptor = async (imagePathOrUrl) => {
             },
             maxContentLength: Infinity,
             maxBodyLength: Infinity,
-            timeout: 30000 // 30s timeout for cold starts
+            timeout: 60000 // 60s timeout for cold starts
         });
 
         const faces = response.data;
@@ -96,6 +96,11 @@ export const isMatch = (descriptor1, descriptor2, threshold = 0.5) => {
 
     const similarity = dot / (Math.sqrt(norm1) * Math.sqrt(norm2));
 
-    // ArcFace threshold: usually > 0.4 or 0.5 is a match
-    return similarity > threshold;
+    // ArcFace threshold: usually > 0.4 is a good balance for recall.
+    // Lower means STRICTER for Euclidean, but HIGHER means STRICTER for Cosine Similarity.
+    // Since this is Cosine Similarity (dot product), higher value = more similar.
+    // Wait, the current logic return similarity > threshold.
+    // So 0.5 is strictly 0.5. To find MORE photos (improve recall), we need to LOWER the required similarity.
+    // Let's try 0.40 which is a common lenient threshold for ArcFace.
+    return similarity > 0.4;
 };
