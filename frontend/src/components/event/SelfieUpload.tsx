@@ -147,25 +147,53 @@ const SelfieUpload = ({ onCapture, selfieUrl }: SelfieUploadProps) => {
         </div>
       ) : stream ? (
         <div className="space-y-4 flex flex-col items-center animate-in fade-in zoom-in duration-300">
-          <div className="relative rounded-2xl overflow-hidden border-4 border-white shadow-2xl w-full max-w-sm bg-black aspect-[3/4] md:aspect-video">
+          {/* Mobile Debug Info - Temporary */}
+          <div className="text-xs text-muted-foreground w-full text-center bg-gray-100 p-2 rounded">
+            Status: {isDragging ? "Dragging" : "Camera Active"} | Stream: {stream.active ? "Yes" : "No"} ({stream.getTracks().length} tracks)
+          </div>
+
+          <div className="relative rounded-2xl overflow-hidden border-4 border-white shadow-2xl w-full max-w-sm bg-black aspect-[3/4] md:aspect-video relative group">
             <video
               ref={videoRef}
               autoPlay
               playsInline
               muted
               onLoadedMetadata={() => {
+                console.log("Video metadata loaded");
                 if (videoRef.current) {
-                  videoRef.current.play().catch(e => console.error("Play error:", e));
+                  videoRef.current.play()
+                    .then(() => console.log("Video playing"))
+                    .catch(e => {
+                      console.error("Play error:", e);
+                      alert("Camera play failed: " + e.message);
+                    });
                 }
               }}
-              className="w-full h-full object-cover transform -scale-x-100"
+              onError={(e) => {
+                console.error("Video Error:", e);
+                alert("Video Error: " + (e.currentTarget.error?.message || "Unknown"));
+              }}
+              onSuspend={() => console.log("Video suspended")}
+              className="w-full h-full object-cover transform -scale-x-100 bg-black z-10"
             />
+
+            {/* Overlay Grid/Frame to show it's working */}
+            <div className="absolute inset-0 border-2 border-white/20 pointer-events-none z-20 m-4 rounded-xl"></div>
           </div>
-          <div className="flex gap-4">
-            <Button variant="destructive" onClick={stopCamera}>Cancel</Button>
-            <Button variant="rose" onClick={capturePhoto} className="gap-2">
-              <Camera className="h-4 w-4" /> Capture Photo
+
+          <div className="flex flex-col gap-3 w-full max-w-xs">
+            <Button variant="rose" size="lg" onClick={capturePhoto} className="gap-2 w-full">
+              <Camera className="h-5 w-5" /> Capture Photo
             </Button>
+
+            <div className="flex gap-2">
+              <Button variant="destructive" variant="outline" onClick={stopCamera} className="flex-1 bg-white hover:bg-gray-100 text-black border-gray-200">
+                Cancel
+              </Button>
+              <Button variant="secondary" onClick={() => fileInputRef.current?.click()} className="flex-1">
+                <Upload className="h-4 w-4 mr-2" /> Upload
+              </Button>
+            </div>
           </div>
         </div>
       ) : (
