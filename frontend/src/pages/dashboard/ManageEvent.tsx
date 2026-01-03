@@ -194,11 +194,30 @@ const ManageEvent = () => {
                         <Button variant="rose" className="gap-2" onClick={() => document.getElementById('photo-upload')?.click()} disabled={uploadProgress.total > 0 && uploadProgress.current < uploadProgress.total}>
                             <Upload className="h-4 w-4" />
                             {uploadProgress.total > 0 && uploadProgress.current < uploadProgress.total
-                                ? `Uploading... (${uploadProgress.current}/${uploadProgress.total})`
+                                ? "Uploading..."
                                 : "Upload Photos"}
                         </Button>
                     </div>
                 </div>
+
+                {/* Upload Progress Bar */}
+                {uploadProgress.total > 0 && uploadProgress.current < uploadProgress.total && (
+                    <div className="mb-8 animate-in fade-in slide-in-from-top-2">
+                        <div className="flex justify-between text-sm mb-2">
+                            <span className="font-medium">Uploading Photos...</span>
+                            <span className="text-muted-foreground">{uploadProgress.current} / {uploadProgress.total}</span>
+                        </div>
+                        <div className="h-2 w-full bg-secondary/20 rounded-full overflow-hidden">
+                            <div
+                                className="h-full bg-primary transition-all duration-300 ease-out"
+                                style={{ width: `${(uploadProgress.current / uploadProgress.total) * 100}%` }}
+                            />
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-2 text-center">
+                            Please keep this page open until all photos are uploaded.
+                        </p>
+                    </div>
+                )}
 
                 {/* Bulk Actions Header */}
                 {selectedPhotos.length > 0 && (
