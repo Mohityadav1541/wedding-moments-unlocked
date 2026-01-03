@@ -101,8 +101,20 @@ const EventPage = () => {
 
       const { data } = await api.post('/photos/search', formData);
 
-      setMatchedPhotos(data);
-      if (data.length === 0) {
+      // Fix: Handle case where backend returns object with matches array (e.g. "No face detected")
+      let results = [];
+      if (Array.isArray(data)) {
+        results = data;
+      } else if (data && Array.isArray(data.matches)) {
+        results = data.matches;
+        if (data.message) {
+          toast.info(data.message);
+        }
+      }
+
+      setMatchedPhotos(results);
+
+      if (results.length === 0 && !data.message) {
         toast.info("No matching photos found with high confidence.");
       }
       setStep("results");
