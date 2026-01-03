@@ -49,7 +49,22 @@ const storage = new CloudinaryStorage({
     },
 });
 
-const upload = multer({
+const searchStorage = new CloudinaryStorage({
+    cloudinary: cloudinary,
+    params: {
+        folder: 'wedding-ai-search',
+        allowed_formats: ['jpg', 'png', 'jpeg', 'webp'],
+        public_id: (req, file) => `search-${Date.now()}`,
+        // No transformations - keep exactly as client sent (high quality, pre-compressed)
+    },
+});
+
+export const searchUpload = multer({
+    storage: searchStorage,
+    limits: { fileSize: 10 * 1024 * 1024 },
+});
+
+export const upload = multer({
     storage,
     limits: { fileSize: 50 * 1024 * 1024 },
 });

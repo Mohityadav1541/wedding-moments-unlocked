@@ -107,18 +107,18 @@ export const addPhoto = async (req, res) => {
 export const searchPhotos = async (req, res) => {
     const { eventId } = req.body;
 
-    // Selfie is now in RAM (req.file.buffer) thanks to memoryMiddleware
-    // We pass the whole file object or buffer to the service
-    const selfieFile = req.file;
+    // Selfie is now uploaded to Cloudinary (req.file.path)
+    // We pass the URL to the service
+    const selfieUrl = req.file ? req.file.path : null;
 
-    if (!selfieFile || !eventId) {
+    if (!selfieUrl || !eventId) {
         return res.status(400).json({ message: 'Selfie image and Event ID are required' });
     }
 
     try {
         // 1. Compute descriptor for Selfie (Single face expected) - External API
-        // Pass the buffer directly
-        const selfieDescriptor = await getFaceDescriptor(selfieFile);
+        // Pass the URL
+        const selfieDescriptor = await getFaceDescriptor(selfieUrl);
 
         if (!selfieDescriptor) {
             return res.status(200).json({
