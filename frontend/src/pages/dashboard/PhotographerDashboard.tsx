@@ -18,6 +18,7 @@ interface Event {
   name: string;
   date: string;
   photos?: any[];
+  photoCount?: number; // Added from backend
   downloads?: number;
 }
 
@@ -46,8 +47,8 @@ const PhotographerDashboard = () => {
 
   // Calculate stats from real data
   const totalEvents = events.length;
-  // Start with 0 for items not yet tracked by backend fully
-  const totalPhotos = events.reduce((acc, curr) => acc + (curr.photos?.length || 0), 0);
+  // Use photoCount if available, fallback to photos.length array if that exists
+  const totalPhotos = events.reduce((acc, curr) => acc + (curr.photoCount || curr.photos?.length || 0), 0);
   const totalDownloads = 0; // Placeholder until backend tracks downloads
   const revenue = 0; // Placeholder
 
@@ -137,7 +138,7 @@ const PhotographerDashboard = () => {
                       </div>
                       <div className="text-right">
                         <p className="font-body text-sm text-foreground">
-                          {event.photos?.length || 0} photos
+                          {event.photoCount || event.photos?.length || 0} photos
                         </p>
                       </div>
                     </div>

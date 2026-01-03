@@ -15,11 +15,20 @@ export const getEvents = async (req, res) => {
             query = {};
         }
 
-        const events = await Event.find(query)
+        const eventsDocs = await Event.find(query)
             .populate('user', 'name email')
-            .sort({ createdAt: -1 });
+            .sort({ createdAt: -1 })
+            .lean(); // Use lean to return plain JS objects
+
+        // Fetch photo counts for each event
+        const events = await Promise.all(eventsDocs.map(async (event) => {
+            const photoCount = await Photo.countDocuments({ event: event._id });
+            return { ...event, photoCount };
+        }));
+
         res.json(events);
     } catch (error) {
+        console.error("Get Events Error:", error);
         res.status(500).json({ message: 'Server Error' });
     }
 };
