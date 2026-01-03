@@ -13,6 +13,8 @@ const SelfieUpload = ({ onCapture, selfieUrl }: SelfieUploadProps) => {
   const [isDragging, setIsDragging] = useState(false);
   const [stream, setStream] = useState<MediaStream | null>(null);
 
+  const [isCameraReady, setIsCameraReady] = useState(false);
+
   // Fix: Attach stream to video element whenever stream state changes
   useEffect(() => {
     if (stream && videoRef.current) {
@@ -21,6 +23,7 @@ const SelfieUpload = ({ onCapture, selfieUrl }: SelfieUploadProps) => {
   }, [stream]);
 
   const startCamera = async () => {
+    setIsCameraReady(false); // Reset ready state
     try {
       // Constraints for mobile facing camera check
       const constraints = {
@@ -45,12 +48,14 @@ const SelfieUpload = ({ onCapture, selfieUrl }: SelfieUploadProps) => {
     if (stream) {
       stream.getTracks().forEach(track => track.stop());
       setStream(null);
+      setIsCameraReady(false);
     }
   };
 
   const capturePhoto = () => {
-    if (videoRef.current) {
+    if (videoRef.current && isCameraReady) {
       if (videoRef.current.videoWidth === 0 || videoRef.current.videoHeight === 0) {
+        // Keep this check just in case, but button should be disabled
         alert("Camera is not ready yet. Please wait a moment and try again.");
         console.error("Capture failed: Video dimensions are 0");
         return;
@@ -174,9 +179,13 @@ const SelfieUpload = ({ onCapture, selfieUrl }: SelfieUploadProps) => {
                     .then(() => console.log("Video playing"))
                     .catch(e => {
                       console.error("Play error:", e);
-                      alert("Camera play failed: " + e.message);
+                      // Don't alert here, just log. It might play on user interaction later if needed.
                     });
                 }
+              }}
+              onCanPlay={() => {
+                console.log("Video can play");
+                setIsCameraReady(true);
               }}
               onError={(e) => {
                 console.error("Video Error:", e);
@@ -191,8 +200,20 @@ const SelfieUpload = ({ onCapture, selfieUrl }: SelfieUploadProps) => {
           </div>
 
           <div className="flex flex-col gap-3 w-full max-w-xs">
-            <Button variant="rose" size="lg" onClick={capturePhoto} className="gap-2 w-full">
-              <Camera className="h-5 w-5" /> Capture Photo
+            <Button
+              variant="rose"
+              size="lg"
+              onClick={capturePhoto}
+              disabled={!isCameraReady}
+              className="gap-2 w-full transition-all"
+            >
+              {isCameraReady ? (
+                <>
+                  <Camera className="h-5 w-5" /> Capture Photo
+                </>
+              ) : (
+                "Loading Camera..."
+              )}
             </Button>
 
             <div className="flex gap-2">
