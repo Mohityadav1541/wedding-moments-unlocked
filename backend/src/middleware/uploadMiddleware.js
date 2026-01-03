@@ -22,24 +22,10 @@ const storage = new CloudinaryStorage({
         let transformation = [];
 
         // Only watermark 'image' uploads (Event Photos), skip 'screenshot' (Payment Proofs)
+        // We now rely on DYNAMIC watermarking in photoController.js to avoid double watermarking
+        // and to keep originals clean.
         if (file.fieldname === 'image') {
-            const studioName = req.user?.studioName || 'Wedding Moments AI';
-
-            if (studioName && req.body.watermark !== 'false') {
-                transformation.push({
-                    overlay: {
-                        font_family: "Arial",
-                        font_size: 80,
-                        text: studioName,
-                        font_weight: "bold"
-                    },
-                    color: "#FFFFFF",
-                    opacity: 50,
-                    gravity: "south_east",
-                    x: 20,
-                    y: 20
-                });
-            }
+            // No static watermark
         }
 
         // Auto-Compression & Optimization for Mobile
