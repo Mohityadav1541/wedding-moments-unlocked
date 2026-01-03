@@ -98,9 +98,8 @@ const EventPage = () => {
       }
 
       // Compress before sending. Increased quality/size for better detection since we rely on server AI now.
-      const { compressImage } = await import("@/utils/imageCompression");
-      // Less aggressive compression (0.9 quality, 1600 width) to help AI find faces in full photos
-      const compressedFile = await compressImage(fileToUpload, 0.9, 1600);
+      // Higher quality compression (0.95 quality, 2000 width) for server AI detection
+      const compressedFile = await compressImage(fileToUpload, 0.95, 2000);
 
       const formData = new FormData();
       formData.append("eventId", event._id);
