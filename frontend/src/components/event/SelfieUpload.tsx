@@ -146,21 +146,25 @@ const SelfieUpload = ({ onCapture, selfieUrl }: SelfieUploadProps) => {
           </div>
         </div>
       ) : stream ? (
-        <div className="space-y-4 flex flex-col items-center">
-          <div className="relative rounded-2xl overflow-hidden border-2 border-primary shadow-elegant w-full max-w-sm bg-black">
+        <div className="space-y-4 flex flex-col items-center animate-in fade-in zoom-in duration-300">
+          <div className="relative rounded-2xl overflow-hidden border-4 border-white shadow-2xl w-full max-w-sm bg-black aspect-[3/4] md:aspect-video">
             <video
               ref={videoRef}
               autoPlay
               playsInline
               muted
-              className="w-full h-auto object-cover transform -scale-x-100"
-              style={{ maxHeight: '400px' }}
+              onLoadedMetadata={() => {
+                if (videoRef.current) {
+                  videoRef.current.play().catch(e => console.error("Play error:", e));
+                }
+              }}
+              className="w-full h-full object-cover transform -scale-x-100"
             />
           </div>
           <div className="flex gap-4">
             <Button variant="destructive" onClick={stopCamera}>Cancel</Button>
             <Button variant="rose" onClick={capturePhoto} className="gap-2">
-              <Camera className="h-4 w-4" /> Capture
+              <Camera className="h-4 w-4" /> Capture Photo
             </Button>
           </div>
         </div>
