@@ -1,5 +1,6 @@
 import Photo from '../models/Photo.js';
 import Event from '../models/Event.js';
+import User from '../models/User.js';
 import { cloudinary } from '../config/cloudinary.js';
 import { getFaceDescriptor, getAllFaceDescriptors, isMatch } from '../services/externalAiService.js';
 
