@@ -16,6 +16,7 @@ const ManageEvent = () => {
     const [photosLoading, setPhotosLoading] = useState(true);
     const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
     const [selectedPhotos, setSelectedPhotos] = useState<string[]>([]);
+    const [uploadError, setUploadError] = useState<any>(null);
 
     useEffect(() => {
         fetchEventDetails();
@@ -176,6 +177,11 @@ const ManageEvent = () => {
                                         } catch (error: any) {
                                             console.error(`Failed to upload file ${i + 1}:`, error);
                                             const serverMsg = error.response?.data?.message || error.message;
+                                            setUploadError({
+                                                file: files[i].name,
+                                                msg: serverMsg,
+                                                fullError: error.response?.data || error
+                                            });
                                             toast.error(`Image ${i + 1}: ${serverMsg}`);
                                         }
                                     }
@@ -347,6 +353,16 @@ const ManageEvent = () => {
                         )}
                     </div>
                 </div>
+
+                {/* Debug Error Box */}
+                {uploadError && (
+                    <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded text-red-800 text-xs font-mono overflow-auto max-h-40">
+                        <p className="font-bold">Last Upload Error:</p>
+                        <p>File: {uploadError.file}</p>
+                        <p>Message: {uploadError.msg}</p>
+                        <pre>{JSON.stringify(uploadError.fullError, null, 2)}</pre>
+                    </div>
+                )}
 
                 {/* Photos Management Section */}
                 <div className="mt-8">
