@@ -187,7 +187,7 @@ const SelfieUpload = ({ onCapture, selfieUrl }: SelfieUploadProps) => {
             </Button>
 
             <div className="flex gap-2">
-              <Button variant="destructive" variant="outline" onClick={stopCamera} className="flex-1 bg-white hover:bg-gray-100 text-black border-gray-200">
+              <Button variant="outline" onClick={stopCamera} className="flex-1 bg-white hover:bg-gray-100 text-black border-gray-200">
                 Cancel
               </Button>
               <Button variant="secondary" onClick={() => fileInputRef.current?.click()} className="flex-1">
