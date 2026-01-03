@@ -8,18 +8,26 @@ import fs from 'fs';
 // We need to handle potential timeouts or initial slow responses.
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'https://mohit00000-wedding-moments-ai.hf.space';
 
-export const getFaceDescriptor = async (imagePathOrUrl) => {
+export const getFaceDescriptor = async (imageInput) => {
     try {
         const formData = new FormData();
 
-        // Handle URL vs Local File
-        if (imagePathOrUrl.startsWith('http')) {
-            // If it's a URL (Cloudinary), we need to fetch it as a stream first
-            const response = await axios.get(imagePathOrUrl, { responseType: 'stream' });
+        // Handle Buffer (Memory Upload) vs URL vs Path
+        if (imageInput && imageInput.buffer) {
+            // It's a Multer file object with buffer
+            formData.append('file', imageInput.buffer, {
+                filename: 'selfie.jpg',
+                contentType: imageInput.mimetype || 'image/jpeg'
+            });
+        } else if (typeof imageInput === 'string' && imageInput.startsWith('http')) {
+            // URL (Cloudinary)
+            const response = await axios.get(imageInput, { responseType: 'stream' });
             formData.append('file', response.data, 'image.jpg');
+        } else if (typeof imageInput === 'string') {
+            // Local file path
+            formData.append('file', fs.createReadStream(imageInput));
         } else {
-            // Local file (multer upload)
-            formData.append('file', fs.createReadStream(imagePathOrUrl));
+            throw new Error("Invalid image input type");
         }
 
         console.log(`Sending image to AI Service at ${AI_SERVICE_URL}/analyze...`);
