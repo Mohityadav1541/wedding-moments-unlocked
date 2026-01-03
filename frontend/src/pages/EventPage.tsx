@@ -82,25 +82,35 @@ const EventPage = () => {
     toast.info("Analyzing your selfie...");
 
     try {
-      // Step 1: Client-side Face Detection & Cropping
-      let blob: Blob | null = null;
-      try {
-        // Dynamically import to ensure it works with the hook
-        const { detectAndCropFace } = await import("@/utils/faceDetection");
-        blob = await detectAndCropFace(selfieUrl);
-      } catch (err: any) {
-        console.warn("Face detection failed, falling back to full image upload:", err);
-        // Fallback: Upload full image if detection fails
-        blob = dataURItoBlob(selfieUrl);
-        if (!blob) throw new Error("Could not process image");
+      // 2. Prepare for upload
+      let fileToUpload: File;
+
+      if (selfieUrl.startsWith("data:image")) {
+        // It's a base64 string from camera or file reader
+        const res = await fetch(selfieUrl);
+        const blob = await res.blob();
+        fileToUpload = new File([blob], "selfie.jpg", { type: "image/jpeg" });
+      } else {
+        // It's a blob url
+        const res = await fetch(selfieUrl);
+        const blob = await res.blob();
+        fileToUpload = new File([blob], "selfie.jpg", { type: "image/jpeg" });
       }
 
+      // Compress before sending to save bandwidth/memory
+      // We do NOT crop here anymore. The server AI is smarter.
+      const { compressImage } = await import("@/utils/imageCompression");
+      const compressedFile = await compressImage(fileToUpload, 0.8, 1280);
+
       const formData = new FormData();
-      formData.append('image', blob, 'selfie.jpg');
-      formData.append('eventId', event._id);
+      formData.append("eventId", event._id);
+      formData.append("image", compressedFile);
 
-      const { data } = await api.post('/photos/search', formData);
+      // 3. Send to Server for AI Search
+      const searchResponse = await api.post("/photos/search", formData);
 
+      // The rest of the logic remains the same...
+      const data = searchResponse.data;
       // Fix: Handle case where backend returns object with matches array (e.g. "No face detected")
       let results = [];
       if (Array.isArray(data)) {
