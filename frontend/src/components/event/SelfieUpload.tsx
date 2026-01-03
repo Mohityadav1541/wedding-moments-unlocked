@@ -50,6 +50,12 @@ const SelfieUpload = ({ onCapture, selfieUrl }: SelfieUploadProps) => {
 
   const capturePhoto = () => {
     if (videoRef.current) {
+      if (videoRef.current.videoWidth === 0 || videoRef.current.videoHeight === 0) {
+        alert("Camera is not ready yet. Please wait a moment and try again.");
+        console.error("Capture failed: Video dimensions are 0");
+        return;
+      }
+
       const canvas = document.createElement("canvas");
       // Use actual video dimensions
       canvas.width = videoRef.current.videoWidth;
@@ -63,14 +69,17 @@ const SelfieUpload = ({ onCapture, selfieUrl }: SelfieUploadProps) => {
 
         try {
           const imageUrl = canvas.toDataURL("image/jpeg", 0.8);
-          if (imageUrl.length > 100) {
+          // console.log("Captured image length:", imageUrl.length); // Debug
+          if (imageUrl.length > 1000) { // Increased threshold slightly to be sure
             onCapture(imageUrl);
             stopCamera();
           } else {
-            alert("Camera capture failed. Please try again.");
+            console.error("Capture failed: Image data too short", imageUrl);
+            alert("Camera capture failed (Empty Image). Please try again.");
           }
-        } catch (e) {
+        } catch (e: any) {
           console.error("Canvas error", e);
+          alert("Capture Error: " + e.message);
         }
       }
     }
