@@ -5,7 +5,7 @@ import { upload, searchUpload } from '../middleware/uploadMiddleware.js';
 
 const router = express.Router();
 
-router.post('/search', searchUpload.single('image'), searchPhotos); // Public AI Search (Cloudinary Raw)
+router.post('/search', searchUpload.array('images', 3), searchPhotos); // Public AI Search (Cloudinary Raw)
 router.post('/delete-batch', protect, admin, deletePhotos); // Batch Delete
 router.route('/').post(protect, admin, upload.single('image'), addPhoto);
 router.route('/:eventId').get(protect, getPhotosByEvent);

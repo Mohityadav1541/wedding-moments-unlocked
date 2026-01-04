@@ -5,9 +5,10 @@ import { Camera, Upload, RefreshCw, Check } from "lucide-react";
 interface SelfieUploadProps {
   onCapture: (imageUrl: string) => void;
   selfieUrl: string | null;
+  label?: string; // Optional label for specific view (e.g., "Front View")
 }
 
-const SelfieUpload = ({ onCapture, selfieUrl }: SelfieUploadProps) => {
+const SelfieUpload = ({ onCapture, selfieUrl, label = "Upload Your Selfie" }: SelfieUploadProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -129,8 +130,8 @@ const SelfieUpload = ({ onCapture, selfieUrl }: SelfieUploadProps) => {
 
   return (
     <div className="bg-card rounded-2xl p-6 md:p-8 shadow-elegant border border-border/50">
-      <h2 className="font-display text-2xl font-bold text-foreground text-center mb-6">
-        Upload Your Selfie
+      <h2 className="font-display text-xl font-bold text-foreground text-center mb-4">
+        {label}
       </h2>
 
       {selfieUrl ? (

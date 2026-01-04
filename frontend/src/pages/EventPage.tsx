@@ -29,7 +29,11 @@ const EventPage = () => {
   const [event, setEvent] = useState<EventData | null>(null);
   const [loading, setLoading] = useState(true);
   const [step, setStep] = useState<"welcome" | "selfie" | "results">("welcome");
-  const [selfieUrl, setSelfieUrl] = useState<string | null>(null);
+  const [selfies, setSelfies] = useState<{ front: string | null; left: string | null; right: string | null }>({
+    front: null,
+    left: null,
+    right: null
+  });
   const [matchedPhotos, setMatchedPhotos] = useState<any[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -52,8 +56,8 @@ const EventPage = () => {
     }
   };
 
-  const handleSelfieCapture = (imageUrl: string) => {
-    setSelfieUrl(imageUrl);
+  const handleSelfieCapture = (type: 'front' | 'left' | 'right') => (imageUrl: string) => {
+    setSelfies(prev => ({ ...prev, [type]: imageUrl }));
   };
 
   // Helper to convert base64/dataURL to Blob for upload
@@ -77,34 +81,37 @@ const EventPage = () => {
   };
 
   const handleFindPhotos = async () => {
-    if (!selfieUrl || !event) return;
+    // Only Front is strictly required, but having more is better
+    if (!selfies.front || !event) {
+      toast.error("Please provide at least the Front View selfie!");
+      return;
+    }
 
     setIsProcessing(true);
-    toast.info("Analyzing your selfie...");
+    toast.info("Analyzing your selfies...");
 
     try {
-      // 2. Prepare for upload
-      let fileToUpload: File;
-
-      if (selfieUrl.startsWith("data:image")) {
-        // It's a base64 string from camera or file reader
-        const res = await fetch(selfieUrl);
-        const blob = await res.blob();
-        fileToUpload = new File([blob], "selfie.jpg", { type: "image/jpeg" });
-      } else {
-        // It's a blob url
-        const res = await fetch(selfieUrl);
-        const blob = await res.blob();
-        fileToUpload = new File([blob], "selfie.jpg", { type: "image/jpeg" });
-      }
-
-      // Compress before sending. Increased quality/size for better detection since we rely on server AI now.
-      // Higher quality compression (0.95 quality, 2000 width) for server AI detection
-      const compressedFile = await compressImage(fileToUpload, 0.95, 2000);
-
       const formData = new FormData();
       formData.append("eventId", event._id);
-      formData.append("image", compressedFile);
+
+      // Helper to process and append generic blob/string
+      const processAndAppend = async (url: string) => {
+        let fileToUpload: File;
+        const res = await fetch(url);
+        const blob = await res.blob();
+        fileToUpload = new File([blob], "selfie.jpg", { type: "image/jpeg" });
+
+        // Compress (HD for better detection)
+        const compressed = await compressImage(fileToUpload, 0.95, 2000);
+        formData.append("images", compressed);
+      };
+
+      // Process Front (Required)
+      if (selfies.front) await processAndAppend(selfies.front);
+
+      // Process Sides (Optional)
+      if (selfies.left) await processAndAppend(selfies.left);
+      if (selfies.right) await processAndAppend(selfies.right);
 
       // 3. Send to Server for AI Search
       const searchResponse = await api.post("/photos/search", formData);
@@ -224,12 +231,25 @@ const EventPage = () => {
         )}
 
         {step === "selfie" && (
-          <div className="max-w-xl mx-auto animate-fade-up">
-            <SelfieUpload
-              onCapture={handleSelfieCapture}
-              selfieUrl={selfieUrl}
-            />
-            {selfieUrl && (
+          <div className="max-w-6xl mx-auto animate-fade-up">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              <SelfieUpload
+                label="1. Front View (Required)"
+                onCapture={handleSelfieCapture('front')}
+                selfieUrl={selfies.front}
+              />
+              <SelfieUpload
+                label="2. Left Side (Recommended)"
+                onCapture={handleSelfieCapture('left')}
+                selfieUrl={selfies.left}
+              />
+              <SelfieUpload
+                label="3. Right Side (Recommended)"
+                onCapture={handleSelfieCapture('right')}
+                selfieUrl={selfies.right}
+              />
+            </div>
+            {selfies.front && (
               <div className="mt-6 text-center">
                 <Button
                   variant="hero"

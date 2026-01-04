@@ -107,22 +107,33 @@ export const addPhoto = async (req, res) => {
 export const searchPhotos = async (req, res) => {
     const { eventId } = req.body;
 
-    // Selfie is now uploaded to Cloudinary (req.file.path)
-    // We pass the URL to the service
-    const selfieUrl = req.file ? req.file.path : null;
+    // Handle multiple files (Multer array) or fallback to single
+    const files = req.files || (req.file ? [req.file] : []);
 
-    if (!selfieUrl || !eventId) {
-        return res.status(400).json({ message: 'Selfie image and Event ID are required' });
+    if (files.length === 0 || !eventId) {
+        return res.status(400).json({ message: 'At least one selfie and Event ID are required' });
     }
 
     try {
-        // 1. Compute descriptor for Selfie (Single face expected) - External API
-        // Pass the URL
-        const selfieDescriptor = await getFaceDescriptor(selfieUrl);
+        // 1. Compute descriptors for ALL uploaded selfies
+        const userDescriptors = [];
 
-        if (!selfieDescriptor) {
+        console.log(`[Search] Processing ${files.length} selfie(s)...`);
+
+        for (const file of files) {
+            const descriptor = await getFaceDescriptor(file.path);
+            if (descriptor) {
+                userDescriptors.push(descriptor);
+            }
+            // Optional: Cleanup Cloudinary temp file immediately if setup requires
+            // cloudinary.uploader.destroy(file.filename);
+        }
+
+        console.log(`[Search] Valid Face Descriptors found: ${userDescriptors.length}`);
+
+        if (userDescriptors.length === 0) {
             return res.status(200).json({
-                message: 'No face detected in selfie. Please try again with a clear photo.',
+                message: 'No face detected in any of the uploaded selfies. Please try clear, front-facing photos.',
                 matches: []
             });
         }
@@ -136,54 +147,37 @@ export const searchPhotos = async (req, res) => {
         const event = await Event.findById(eventId);
         const eventFeatures = event ? event.features : { watermarkEnabled: true, watermarkText: 'Wedding Moments' };
 
-        // 3. Match faces (Check if selfie matches ANY face in the photo)
+        // 3. Match faces (Check if ANY user descriptor matches ANY face in the photo)
         const matches = eventPhotos.filter(photo => {
-            // photo.faceDescriptors is array of arrays
-            return photo.faceDescriptors.some(descriptor => {
-                return isMatch(selfieDescriptor, descriptor);
+            // photo.faceDescriptors is array of arrays (faces in photo)
+            return photo.faceDescriptors.some(dbDesc => {
+                // Check this face against ALL user's selfie descriptors
+                return userDescriptors.some(userDesc => isMatch(userDesc, dbDesc));
             });
         });
 
+        console.log(`[Search] Matches found: ${matches.length}`);
+
         // 4. Transform matches for display (Add Watermark logic)
-        // Assuming Cloudinary URLs
         const results = matches.map(photo => {
-            // Apply generic studio watermark for download
-            // Cloudinary transformation: overlay text "Wedding Moments"
-            // Simple structure: insert transformation string before filename
-            // Example: https://res.cloudinary.com/cloud/image/upload/v1234/folder/file.jpg
-            // Target: https://res.cloudinary.com/cloud/image/upload/l_text:Arial_80_bold:Wedding%20AI,g_south_east,co_white,o_80/v1234/folder/file.jpg
-
-            // Fetch event settings for watermark
-            // We already have eventId, let's look up the event features
-            // Optimization: In a real app, populate this earlier or cache it, 
-            // but for now we fetch it inside the loop or mock it? 
-            // Actually, we need to fetch the event once outside the loop.
-
             let downloadUrl = photo.url;
 
-            // Check if watermark is enabled for this event
-            // (Passed from top scope - we need to fetch event first)
             if (eventFeatures.watermarkEnabled && photo.url.includes('/upload/')) {
                 const parts = photo.url.split('/upload/');
-                // Encode text for Cloudinary URL (e.g. spaces to %20)
                 const text = encodeURIComponent(eventFeatures.watermarkText || 'Wedding Moments AI');
-                // Cloudinary transformation: overlay text, bottom right, white, opacity 60%
                 const transformation = `l_text:Arial_80_bold:${text},g_south,y_20,co_white,o_60`;
                 downloadUrl = `${parts[0]}/upload/${transformation}/${parts[1]}`;
             }
 
             return {
                 _id: photo._id,
-                url: photo.url, // Preview original (or maybe low res?)
-                downloadUrl,    // Watermarked
-                confidence: 90 // Placeholder or calculate real confidence
+                url: photo.url,
+                downloadUrl,
+                confidence: 90 // Placeholder
             };
         });
 
         res.json(results);
-
-        // Optional: Delete the temp selfie from Cloudinary to save space?
-        // if (req.file.filename) cloudinary.uploader.destroy(req.file.filename);
 
     } catch (error) {
         console.error("Search Photos Error:", error);
