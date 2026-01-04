@@ -7,7 +7,7 @@ const API_URL = process.env.HUGGING_FACE_API_URL;
 
 // Euclidean distance threshold for face matching
 // 0.6 is the standard threshold for dlib/face_recognition
-const MATCH_THRESHOLD = 0.5; // Slightly stricter for better accuracy
+const MATCH_THRESHOLD = 0.6; // Standard dlib threshold (0.6) for better recall
 
 const getClient = () => {
     if (!API_URL) {
