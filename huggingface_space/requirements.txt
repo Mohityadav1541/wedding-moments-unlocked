@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+python-multipart
+requests
+numpy
+pillow
+# face-recognition depends on dlib. Conda installed dlib.
+# Pip will see dlib is present and skip compiling it.
+face-recognition

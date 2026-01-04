@@ -6,6 +6,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowLeft, Calendar, MapPin, Image, Upload, Trash2, X } from "lucide-react";
 import api from "@/lib/api";
 import { toast } from "sonner";
+import { compressImage } from "@/utils/imageCompression";
 
 const ManageEvent = () => {
     const { eventId } = useParams();
@@ -157,6 +158,7 @@ const ManageEvent = () => {
                             id="photo-upload"
                             onChange={async (e) => {
                                 const files = e.target.files;
+                                if (!files || files.length === 0) return;
                                 const totalFiles = files.length;
                                 let uploadedCount = 0;
                                 toast.info(`Starting upload of ${totalFiles} photos...`);
@@ -167,14 +169,8 @@ const ManageEvent = () => {
                                 for (let i = 0; i < fileArray.length; i += BATCH_SIZE) {
                                     const batch = fileArray.slice(i, i + BATCH_SIZE);
                                     await Promise.all(batch.map(async (file, index) => {
-                                        // Update toast to show what's happening
-                                        // const currentFileNum = i + index + 1;
-                                        // toast.loading(`Compressing & Uploading ${currentFileNum}/${totalFiles}...`, { id: 'upload-toast' });
-
                                         try {
-                                            // 1. Compress Image
-                                            const compressedFile = await compressImage(file, 0.7, 1600); // Aggressive compression for speed
-
+                                            const compressedFile = await compressImage(file, 0.7, 1600);
                                             const formData = new FormData();
                                             formData.append('eventId', event._id);
                                             formData.append('image', compressedFile);
@@ -197,7 +193,6 @@ const ManageEvent = () => {
 
                                 toast.success(`Upload complete! ${uploadedCount}/${totalFiles} photos uploaded.`);
                                 fetchPhotos();
-                            }
                             }}
                         />
                         <Button variant="rose" className="gap-2" onClick={() => document.getElementById('photo-upload')?.click()} disabled={uploadProgress.total > 0 && uploadProgress.current < uploadProgress.total}>
