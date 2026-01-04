@@ -29,11 +29,7 @@ const EventPage = () => {
   const [event, setEvent] = useState<EventData | null>(null);
   const [loading, setLoading] = useState(true);
   const [step, setStep] = useState<"welcome" | "selfie" | "results">("welcome");
-  const [selfies, setSelfies] = useState<{ front: string | null; left: string | null; right: string | null }>({
-    front: null,
-    left: null,
-    right: null
-  });
+  const [selfieUrl, setSelfieUrl] = useState<string | null>(null);
   const [matchedPhotos, setMatchedPhotos] = useState<any[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -56,8 +52,8 @@ const EventPage = () => {
     }
   };
 
-  const handleSelfieCapture = (type: 'front' | 'left' | 'right') => (imageUrl: string) => {
-    setSelfies(prev => ({ ...prev, [type]: imageUrl }));
+  const handleSelfieCapture = (imageUrl: string) => {
+    setSelfieUrl(imageUrl);
   };
 
   // Helper to convert base64/dataURL to Blob for upload
@@ -231,7 +227,7 @@ const EventPage = () => {
         )}
 
         {step === "selfie" && (
-          <div className="max-w-6xl mx-auto animate-fade-up">
+          <div className="max-w-xl mx-auto animate-fade-up">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
               <SelfieUpload
                 label="1. Front View (Required)"
