@@ -34,7 +34,7 @@ const storage = new CloudinaryStorage({
         // 'q_auto' automatically adjusts quality to human-eye perception (saves ~60% size)
         // 'f_auto' serves WebP/AVIF to compatible devices
         transformation.push({
-            width: 2500,
+            width: 1080,
             crop: "limit",
             quality: "auto",
             fetch_format: "auto"
@@ -60,7 +60,7 @@ const searchStorage = new CloudinaryStorage({
 });
 
 export const searchUpload = multer({
-    storage: searchStorage,
+    storage: multer.memoryStorage(),
     limits: { fileSize: 10 * 1024 * 1024 },
 });
 

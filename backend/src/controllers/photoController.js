@@ -121,12 +121,13 @@ export const searchPhotos = async (req, res) => {
         console.log(`[Search] Processing ${files.length} selfie(s)...`);
 
         for (const file of files) {
-            const descriptor = await getFaceDescriptor(file.path);
-            if (descriptor) {
-                userDescriptors.push(descriptor);
+            // Note: file.buffer is available because we use memoryStorage now
+            if (file.buffer) {
+                const descriptor = await getFaceDescriptor(file.buffer);
+                if (descriptor) {
+                    userDescriptors.push(descriptor);
+                }
             }
-            // Optional: Cleanup Cloudinary temp file immediately if setup requires
-            // cloudinary.uploader.destroy(file.filename);
         }
 
         console.log(`[Search] Valid Face Descriptors found: ${userDescriptors.length}`);
@@ -158,14 +159,28 @@ export const searchPhotos = async (req, res) => {
 
         console.log(`[Search] Matches found: ${matches.length}`);
 
-        // 4. Transform matches for display (Add Watermark logic)
+        // 4. Transform matches for display (Add Smart Watermark logic)
         const results = matches.map(photo => {
             let downloadUrl = photo.url;
 
-            if (eventFeatures.watermarkEnabled && photo.url.includes('/upload/')) {
+            // Watermark Logic:
+            // 1. Must be enabled in event features
+            // 2. AND Price must be > 0 (If free, no watermark)
+            const shouldWatermark = eventFeatures.watermarkEnabled && (event.pricePerPhoto > 0);
+
+            if (shouldWatermark && photo.url.includes('/upload/')) {
                 const parts = photo.url.split('/upload/');
                 const text = encodeURIComponent(eventFeatures.watermarkText || 'Wedding Moments AI');
-                const transformation = `l_text:Arial_80_bold:${text},g_south,y_20,co_white,o_60`;
+
+                // Bottom Watermark Styling
+                // g_south = Bottom
+                // y_20 = Margin from bottom
+                // co_white = White Text
+                // l_text:Arial_60_bold = Font
+                // b_rgb:00000080 = Semi-transparent black background for readability (Optional, distinct visibility)
+                // For now, clean text at bottom as requested:
+                const transformation = `l_text:Arial_60_bold:${text},g_south,y_50,co_white,o_90,b_rgb:00000050`;
+
                 downloadUrl = `${parts[0]}/upload/${transformation}/${parts[1]}`;
             }
 

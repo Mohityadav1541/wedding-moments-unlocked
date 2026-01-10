@@ -16,7 +16,9 @@ interface EventData {
   location: string;
   coverImage?: string;
   photos?: any[];
-  price?: number;
+  photos?: any[];
+  price?: number; // Package Price
+  pricePerPhoto?: number; // Download Price
   user?: { name: string };
   features?: {
     watermarkEnabled: boolean;
@@ -29,7 +31,7 @@ const EventPage = () => {
   const [event, setEvent] = useState<EventData | null>(null);
   const [loading, setLoading] = useState(true);
   const [step, setStep] = useState<"welcome" | "selfie" | "results">("welcome");
-  const [selfieUrl, setSelfieUrl] = useState<string | null>(null);
+  const [selfies, setSelfies] = useState<{ front?: string; left?: string; right?: string }>({});
   const [matchedPhotos, setMatchedPhotos] = useState<any[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -52,8 +54,8 @@ const EventPage = () => {
     }
   };
 
-  const handleSelfieCapture = (imageUrl: string) => {
-    setSelfieUrl(imageUrl);
+  const handleSelfieCapture = (side: "front" | "left" | "right") => (imageUrl: string) => {
+    setSelfies((prev) => ({ ...prev, [side]: imageUrl }));
   };
 
   // Helper to convert base64/dataURL to Blob for upload
@@ -76,6 +78,15 @@ const EventPage = () => {
     }
   };
 
+  useEffect(() => {
+    // Load models when component mounts
+    const loadFaceApi = async () => {
+      const { loadModels } = await import("@/services/FaceDetectionService");
+      await loadModels();
+    };
+    loadFaceApi();
+  }, []);
+
   const handleFindPhotos = async () => {
     // Only Front is strictly required, but having more is better
     if (!selfies.front || !event) {
@@ -87,27 +98,50 @@ const EventPage = () => {
     toast.info("Analyzing your selfies...");
 
     try {
+      const { detectAndCropFace } = await import("@/services/FaceDetectionService");
       const formData = new FormData();
       formData.append("eventId", event._id);
 
-      // Helper to process and append generic blob/string
+      // Helper to process and append generic blob/string using Face API
       const processAndAppend = async (url: string) => {
-        let fileToUpload: File;
         const res = await fetch(url);
         const blob = await res.blob();
-        fileToUpload = new File([blob], "selfie.jpg", { type: "image/jpeg" });
+        const file = new File([blob], "selfie.jpg", { type: "image/jpeg" });
 
-        // Compress (HD for better detection)
-        const compressed = await compressImage(fileToUpload, 0.95, 2000);
-        formData.append("images", compressed);
+        // Use Client-Side Face Detection & Cropping
+        console.log("Detecting face in client...");
+        const croppedBlob = await detectAndCropFace(file);
+
+        if (croppedBlob) {
+          console.log("Face detected and cropped!", croppedBlob.size);
+          formData.append("images", croppedBlob, "face_crop.jpg");
+        } else {
+          console.warn("No face detected in this selfie, skipping.");
+          // Optional: You could still upload the original if you want to rely on server backend as fallback, 
+          // but strict requirements say "Upload only the cropped face image"
+          // So we skip or notify user.
+          toast.warning("No face detected in one of the selfies.");
+        }
       };
 
       // Process Front (Required)
-      if (selfies.front) await processAndAppend(selfies.front);
+      await processAndAppend(selfies.front);
 
       // Process Sides (Optional)
       if (selfies.left) await processAndAppend(selfies.left);
       if (selfies.right) await processAndAppend(selfies.right);
+
+      // Check if we actually have any valid faces to send
+      // FormData entries iterator check
+      // @ts-ignore
+      const entries = [...formData.entries()];
+      const hasImages = entries.some(e => e[0] === 'images');
+
+      if (!hasImages) {
+        toast.error("No valid faces detected in your selfies. Please try again with better lighting.");
+        setIsProcessing(false);
+        return;
+      }
 
       // 3. Send to Server for AI Search
       const searchResponse = await api.post("/photos/search", formData);
@@ -119,6 +153,7 @@ const EventPage = () => {
         results = data;
       } else if (data.matches) {
         if (data.message && data.message.includes("No face detected")) {
+          // Should be rare now with client check
           toast.error("No face found! Please take a closer selfie with good lighting.");
           setStep('welcome'); // Reset to start
           return;
@@ -283,7 +318,7 @@ const EventPage = () => {
             </div>
             <PhotoGallery
               photos={matchedPhotos}
-              photoPrice={event.price || 0}
+              photoPrice={event.pricePerPhoto || 0}
               photographerName={event.user?.name || "Wedding Moment AI"}
               watermarkEnabled={event.features?.watermarkEnabled ?? true}
             />

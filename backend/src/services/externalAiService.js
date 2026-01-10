@@ -23,23 +23,45 @@ const getClient = () => {
     });
 };
 
+
 /**
- * Get descriptor for a single face in the image.
- * Returns null if no face or multiple faces (optional policy).
+ * Get descriptor for a single face in the image (Buffer or Path).
+ * Now supports Buffers for privacy (no storage).
  */
-export const getFaceDescriptor = async (imageUrl) => {
+export const getFaceDescriptor = async (imageInput) => {
     try {
         const client = getClient();
         if (!client) return null;
 
-        console.log(`[AI Service] Analyzing: ${imageUrl}`);
-        const response = await client.post('/analyze-url', { url: imageUrl });
+        const formData = new FormData();
 
-        const { descriptors } = response.data;
+        if (Buffer.isBuffer(imageInput)) {
+            formData.append('file', new Blob([imageInput]), 'image.jpg');
+        } else if (typeof imageInput === 'string') {
+            // Fallback for file path (though we prefer buffers now)
+            // If it's a URL, we can't easily send it to /analyze which expects file
+            // So we skip or fetch it. For now, assuming local path or buffer.
+            // If local path:
+            // const fs = await import('fs');
+            // formData.append('file', fs.createReadStream(imageInput));
+            console.warn("[AI Service] String path support deprecated for search. Use Buffer.");
+            return null;
+        }
 
-        if (descriptors && descriptors.length > 0) {
-            // Return the first face found
-            return descriptors[0];
+        console.log(`[AI Service] Analyzing Buffer...`);
+        // Use standard 'multipart/form-data'
+        const response = await client.post('/analyze', formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data'
+            }
+        });
+
+        // Response is array of faces
+        const faces = response.data;
+
+        if (faces && faces.length > 0) {
+            // Return expectation: just the embedding array
+            return faces[0].embedding;
         }
         return null;
     } catch (error) {
@@ -51,16 +73,41 @@ export const getFaceDescriptor = async (imageUrl) => {
 /**
  * Get all face descriptors from an image.
  */
-export const getAllFaceDescriptors = async (imageUrl) => {
+export const getAllFaceDescriptors = async (imageInput) => {
     try {
         const client = getClient();
         if (!client) return [];
 
-        console.log(`[AI Service] Analyzing (All): ${imageUrl}`);
-        const response = await client.post('/analyze-url', { url: imageUrl });
+        const formData = new FormData();
+        // Check if input is a URL (Cloudinary) or Buffer
+        // If it's a Cloudinary URL, we unfortunately have to fetch it first or keep using the old way 
+        // BUT the Python service only supports file upload on /analyze now (as per my plan).
+        // So for event photos (already on Cloudinary), we might need to fetch stream.
 
-        const { descriptors } = response.data;
-        return descriptors || [];
+        if (typeof imageInput === 'string' && imageInput.startsWith('http')) {
+            const fetch = (await import('node-fetch')).default;
+            const res = await fetch(imageInput);
+            const blob = await res.blob();
+            // Node fetch blob to buffer
+            const arrayBuffer = await blob.arrayBuffer();
+            const buffer = Buffer.from(arrayBuffer);
+            formData.append('file', new Blob([buffer]), 'image.jpg');
+        } else {
+            // Assume buffer or fail
+            console.warn("[AI Service] getAllFaceDescriptors requires URL or Buffer");
+            return [];
+        }
+
+        console.log(`[AI Service] Analyzing (All)...`);
+        const response = await client.post('/analyze', formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data'
+            }
+        });
+
+        // Response is array of objects { embedding: [...] }
+        const faces = response.data;
+        return faces.map(f => f.embedding) || [];
     } catch (error) {
         console.error("[AI Service] Error getting descriptors:", error.message);
         return [];

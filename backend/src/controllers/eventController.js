@@ -37,7 +37,7 @@ export const getEvents = async (req, res) => {
 // @route   POST /api/events
 // @access  Private/Admin
 export const createEvent = async (req, res) => {
-    const { name, date, location, selectedPackage } = req.body;
+    const { name, date, location, selectedPackage, pricePerPhoto } = req.body;
 
     try {
         const user = await User.findById(req.user._id);
@@ -70,6 +70,7 @@ export const createEvent = async (req, res) => {
             location,
             package: user.currentPlan || 'None', // Event inherits user's plan at time of creation
             price: 0, // Price handled via external subscription now
+            pricePerPhoto: pricePerPhoto || 0, // Set per-photo download price
             paymentStatus: 'confirmed', // Auto-confirm as subscription/quota is used
             superAdminConfirmed: true, // Auto-confirm as subscription is pre-paid
             features: {
@@ -263,6 +264,7 @@ export const getPublicEventById = async (req, res) => {
                 coverImage: event.coverImage,
                 package: event.package,
                 price: event.price,
+                pricePerPhoto: event.pricePerPhoto || 0,
                 user: { name: event.user?.name },
                 photos: []
             };

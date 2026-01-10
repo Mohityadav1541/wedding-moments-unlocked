@@ -88,6 +88,7 @@ const CreateEvent = () => {
             name: formData.get("name"),
             date: formData.get("date"),
             location: formData.get("location"),
+            pricePerPhoto: Number(formData.get("pricePerPhoto")) || 0,
             // Package is now determined by user subscription on backend
         };
 
@@ -153,6 +154,21 @@ const CreateEvent = () => {
                         <div className="space-y-2">
                             <Label htmlFor="location">Location</Label>
                             <Input id="location" name="location" placeholder="e.g. Grand Hotel, Mumbai" />
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="pricePerPhoto">Price Per Photo (₹)</Label>
+                            <Input
+                                id="pricePerPhoto"
+                                name="pricePerPhoto"
+                                type="number"
+                                min="0"
+                                defaultValue="0"
+                                placeholder="0 for Free Downloads"
+                            />
+                            <p className="text-xs text-muted-foreground">
+                                Set to 0 for Free Downloads (No Watermark). Set amount for Paid Downloads (Watermarked).
+                            </p>
                         </div>
 
                         {/* Package selection removed as it's subscription based now */}

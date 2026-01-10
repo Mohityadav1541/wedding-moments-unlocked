@@ -40,6 +40,10 @@ const eventSchema = new mongoose.Schema({
         required: true,
         default: 1499
     },
+    pricePerPhoto: {
+        type: Number,
+        default: 0
+    },
     paymentStatus: {
         type: String,
         enum: ['pending', 'paid', 'confirmed'],
