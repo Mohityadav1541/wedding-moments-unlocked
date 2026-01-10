@@ -170,7 +170,7 @@ const ManageEvent = () => {
                                     const batch = fileArray.slice(i, i + BATCH_SIZE);
                                     await Promise.all(batch.map(async (file, index) => {
                                         try {
-                                            const compressedFile = await compressImage(file, 0.9, 2500); // HD Quality for Event Photos
+                                            const compressedFile = await compressImage(file, 0.95, 1080); // 1080px limit, High Quality (relaxed size)
                                             const formData = new FormData();
                                             formData.append('eventId', event._id);
                                             formData.append('image', compressedFile);
