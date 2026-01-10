@@ -161,26 +161,33 @@ export const searchPhotos = async (req, res) => {
 
         // 4. Transform matches for display (Add Smart Watermark logic)
         const results = matches.map(photo => {
-            let downloadUrl = photo.url;
+            // Base Transformation: Always resize to 1080px width (High Quality Mobile)
+            let transformation = 'w_1080,c_limit,q_auto,f_auto';
 
             // Watermark Logic:
             // 1. Must be enabled in event features
             // 2. AND Price must be > 0 (If free, no watermark)
             const shouldWatermark = eventFeatures.watermarkEnabled && (event.pricePerPhoto > 0);
 
-            if (shouldWatermark && photo.url.includes('/upload/')) {
-                const parts = photo.url.split('/upload/');
+            if (shouldWatermark) {
                 const text = encodeURIComponent(eventFeatures.watermarkText || 'Wedding Moments AI');
 
-                // Bottom Watermark Styling
-                // g_south = Bottom
-                // y_20 = Margin from bottom
-                // co_white = White Text
-                // l_text:Arial_60_bold = Font
-                // b_rgb:00000080 = Semi-transparent black background for readability (Optional, distinct visibility)
-                // For now, clean text at bottom as requested:
-                const transformation = `l_text:Arial_60_bold:${text},g_south,y_50,co_white,o_90,b_rgb:00000050`;
+                // Bottom Watermark Styling + Base Resize
+                // We append the watermark layers on top of the base resize
+                // Check Cloudinary syntax: Usually transformations are chained / or ,
+                // For a simple single URL generation, we can stack them.
+                // l_text... is a layer. 
+                // Careful: standard transformation string vs layer.
 
+                // Let's use a robust layered transformation string
+                // 1. Resize base image
+                // 2. Add text layer at bottom
+
+                transformation += `/l_text:Arial_60_bold:${text},g_south,y_50,co_white,o_90,b_rgb:00000050,fl_layer_apply`;
+            }
+
+            if (photo.url.includes('/upload/')) {
+                const parts = photo.url.split('/upload/');
                 downloadUrl = `${parts[0]}/upload/${transformation}/${parts[1]}`;
             }
 
