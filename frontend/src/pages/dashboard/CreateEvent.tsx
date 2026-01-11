@@ -62,18 +62,7 @@ const CreateEvent = () => {
                     <Button onClick={() => navigate('/packages')}>
                         View Packages
                     </Button>
-                    <div className="mt-8 p-4 bg-muted/50 rounded text-left text-xs font-mono overflow-auto max-h-40">
-                        <p className="font-bold mb-2">Debug Info (Take Screenshot):</p>
-                        <pre>{JSON.stringify({
-                            role: user.role,
-                            subStatus: user.subscription?.status,
-                            plan: user.subscription?.plan,
-                            quota: user.subscription?.quota,
-                            expiresAt: user.subscription?.expiresAt,
-                            hasSub: hasActiveSubscription,
-                            hasQuota: hasQuota
-                        }, null, 2)}</pre>
-                    </div>
+
                 </div>
             </DashboardLayout>
         );
