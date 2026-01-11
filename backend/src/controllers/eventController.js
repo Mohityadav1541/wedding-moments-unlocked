@@ -113,6 +113,7 @@ export const updateEvent = async (req, res) => {
             if (req.body.name) event.name = req.body.name;
             if (req.body.date) event.date = req.body.date;
             if (req.body.location) event.location = req.body.location;
+            if (req.body.pricePerPhoto !== undefined) event.pricePerPhoto = req.body.pricePerPhoto;
 
             // Update features carefully (merge)
             if (req.body.features) {

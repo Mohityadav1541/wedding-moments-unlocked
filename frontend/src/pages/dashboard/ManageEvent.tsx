@@ -1,9 +1,20 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowLeft, Calendar, MapPin, Image, Upload, Trash2, X } from "lucide-react";
+import { ArrowLeft, Calendar, MapPin, Image, Upload, Trash2, X, Settings, Edit } from "lucide-react";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import api from "@/lib/api";
 import { toast } from "sonner";
 import { compressImage } from "@/utils/imageCompression";
@@ -18,6 +29,8 @@ const ManageEvent = () => {
     const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
     const [selectedPhotos, setSelectedPhotos] = useState<string[]>([]);
     const [uploadError, setUploadError] = useState<any>(null);
+    const [editOpen, setEditOpen] = useState(false);
+    const [updating, setUpdating] = useState(false);
 
     useEffect(() => {
         fetchEventDetails();
@@ -101,6 +114,30 @@ const ManageEvent = () => {
         }
     };
 
+    const handleUpdateEvent = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        setUpdating(true);
+        const formData = new FormData(e.currentTarget);
+        const updates = {
+            name: formData.get('name'),
+            date: formData.get('date'),
+            location: formData.get('location'),
+            pricePerPhoto: Number(formData.get('pricePerPhoto'))
+        };
+
+        try {
+            await api.put(`/events/${eventId}`, updates);
+            toast.success("Event updated successfully");
+            setEditOpen(false);
+            fetchEventDetails();
+        } catch (error: any) {
+            console.error("Update failed:", error);
+            toast.error(error.response?.data?.message || "Failed to update event");
+        } finally {
+            setUpdating(false);
+        }
+    };
+
     const toggleSelection = (id: string) => {
         setSelectedPhotos(prev =>
             prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]
@@ -130,9 +167,55 @@ const ManageEvent = () => {
 
                 <div className="flex flex-col md:flex-row md:items-start justify-between gap-6 mb-8">
                     <div>
-                        <h1 className="font-display text-3xl font-bold text-foreground mb-2">
-                            {event.name}
-                        </h1>
+                        <div className="flex items-center gap-3 mb-2">
+                            <h1 className="font-display text-3xl font-bold text-foreground">
+                                {event.name}
+                            </h1>
+                            <Dialog open={editOpen} onOpenChange={setEditOpen}>
+                                <DialogTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                                        <Edit className="h-4 w-4" />
+                                    </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                    <DialogHeader>
+                                        <DialogTitle>Edit Event Details</DialogTitle>
+                                        <DialogDescription>
+                                            Update the event information and settings.
+                                        </DialogDescription>
+                                    </DialogHeader>
+                                    <form onSubmit={handleUpdateEvent} className="space-y-4">
+                                        <div className="space-y-2">
+                                            <Label htmlFor="name">Event Name</Label>
+                                            <Input id="name" name="name" defaultValue={event.name} required />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="date">Date</Label>
+                                            <Input id="date" name="date" type="date" defaultValue={event.date ? new Date(event.date).toISOString().split('T')[0] : ''} required />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="location">Location</Label>
+                                            <Input id="location" name="location" defaultValue={event.location} />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="pricePerPhoto">Price Per Photo (₹)</Label>
+                                            <Input
+                                                id="pricePerPhoto"
+                                                name="pricePerPhoto"
+                                                type="number"
+                                                min="0"
+                                                defaultValue={event.pricePerPhoto || 0}
+                                            />
+                                            <p className="text-xs text-muted-foreground">0 = Free Downloads. &gt;0 = Paid, Watermarked.</p>
+                                        </div>
+                                        <DialogFooter>
+                                            <Button type="button" variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
+                                            <Button type="submit" disabled={updating}>{updating ? 'Saving...' : 'Save Changes'}</Button>
+                                        </DialogFooter>
+                                    </form>
+                                </DialogContent>
+                            </Dialog>
+                        </div>
                         <div className="flex flex-wrap gap-4 text-muted-foreground">
                             <div className="flex items-center gap-2">
                                 <Calendar className="h-4 w-4" />
@@ -248,6 +331,13 @@ const ManageEvent = () => {
                             <div className="flex justify-between items-center">
                                 <span className="text-muted-foreground">Package</span>
                                 <span className="font-bold text-primary">{event.package} (₹{event.price})</span>
+                            </div>
+
+                            <div className="flex justify-between items-center">
+                                <span className="text-muted-foreground">Price Per Photo</span>
+                                <span className="font-bold text-primary">
+                                    {event.pricePerPhoto > 0 ? `₹${event.pricePerPhoto}` : 'Free'}
+                                </span>
                             </div>
 
                             <div className="p-3 rounded-lg bg-secondary/10 border border-secondary/20">
