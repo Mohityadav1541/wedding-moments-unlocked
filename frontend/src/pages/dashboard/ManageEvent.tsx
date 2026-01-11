@@ -24,7 +24,7 @@ const ManageEvent = () => {
     const [event, setEvent] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [screenshot, setScreenshot] = useState<File | null>(null);
-    const [photos, setPhotos] = useState([]);
+    const [photos, setPhotos] = useState<any[]>([]);
     const [photosLoading, setPhotosLoading] = useState(true);
     const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
     const [selectedPhotos, setSelectedPhotos] = useState<string[]>([]);
