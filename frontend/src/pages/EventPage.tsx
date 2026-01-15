@@ -16,7 +16,7 @@ interface EventData {
   location: string;
   coverImage?: string;
   photos?: any[];
-  photos?: any[];
+
   price?: number; // Package Price
   pricePerPhoto?: number; // Download Price
   user?: { name: string };
@@ -31,7 +31,7 @@ const EventPage = () => {
   const [event, setEvent] = useState<EventData | null>(null);
   const [loading, setLoading] = useState(true);
   const [step, setStep] = useState<"welcome" | "selfie" | "results">("welcome");
-  const [selfies, setSelfies] = useState<{ front?: string; left?: string; right?: string }>({});
+  const [selfies, setSelfies] = useState<{ front?: string }>({});
   const [matchedPhotos, setMatchedPhotos] = useState<any[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -54,7 +54,7 @@ const EventPage = () => {
     }
   };
 
-  const handleSelfieCapture = (side: "front" | "left" | "right") => (imageUrl: string) => {
+  const handleSelfieCapture = (side: "front") => (imageUrl: string) => {
     setSelfies((prev) => ({ ...prev, [side]: imageUrl }));
   };
 
@@ -126,10 +126,6 @@ const EventPage = () => {
 
       // Process Front (Required)
       await processAndAppend(selfies.front);
-
-      // Process Sides (Optional)
-      if (selfies.left) await processAndAppend(selfies.left);
-      if (selfies.right) await processAndAppend(selfies.right);
 
       // Check if we actually have any valid faces to send
       // FormData entries iterator check
@@ -263,22 +259,14 @@ const EventPage = () => {
 
         {step === "selfie" && (
           <div className="max-w-xl mx-auto animate-fade-up">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-              <SelfieUpload
-                label="1. Front View (Required)"
-                onCapture={handleSelfieCapture('front')}
-                selfieUrl={selfies.front}
-              />
-              <SelfieUpload
-                label="2. Left Side (Recommended)"
-                onCapture={handleSelfieCapture('left')}
-                selfieUrl={selfies.left}
-              />
-              <SelfieUpload
-                label="3. Right Side (Recommended)"
-                onCapture={handleSelfieCapture('right')}
-                selfieUrl={selfies.right}
-              />
+            <div className="flex justify-center mb-8">
+              <div className="w-full max-w-sm">
+                <SelfieUpload
+                  label="Upload Your Selfie"
+                  onCapture={handleSelfieCapture('front')}
+                  selfieUrl={selfies.front}
+                />
+              </div>
             </div>
             {selfies.front && (
               <div className="mt-6 text-center">
