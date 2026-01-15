@@ -63,38 +63,32 @@ export const addPhoto = async (req, res) => {
             return res.status(403).json({ message: `Photo limit reached (${limit}). Upgrade your plan to upload more.` });
         }
 
-        // Create photo entry first (Fast response)
+        // --- AI PROCESSING (Synchronous for Vercel) ---
+        // We must await this because Vercel freezes the function immediately after res.json()
+        let faceDescriptors = [];
+        try {
+            console.log(`[Photo] Starting AI processing for URL: ${url}`);
+            const descriptors = await getAllFaceDescriptors(url);
+            console.log(`[Photo] AI Processing complete. Descriptors found: ${descriptors ? descriptors.length : 0}`);
+            if (descriptors) {
+                faceDescriptors = descriptors;
+            }
+        } catch (aiError) {
+            console.error("[Photo] AI Service Failed:", aiError.message);
+            // We continue even if AI fails, but user should know? 
+            // For now, we save the photo anyway so they don't lose the upload.
+        }
+
         const photo = new Photo({
             event: eventId,
             url,
-            faceDescriptors: [] // Will be updated asynchronously
+            faceDescriptors: faceDescriptors
         });
 
         const createdPhoto = await photo.save();
-        console.log(`[Photo] Saved to DB (Initial): ${createdPhoto._id}`);
+        console.log(`[Photo] Saved to DB: ${createdPhoto._id}`);
 
-        // Respond to client immediately
         res.status(201).json(createdPhoto);
-
-        // --- BACKGROUND AI PROCESS START ---
-        // Fire and forget (but log errors)
-        (async () => {
-            console.log(`[Photo] Starting background AI processing for: ${createdPhoto._id}`);
-            try {
-                const descriptors = await getAllFaceDescriptors(url);
-                console.log(`[Photo] AI Processing complete. Descriptors found: ${descriptors ? descriptors.length : 0}`);
-
-                if (descriptors && descriptors.length > 0) {
-                    createdPhoto.faceDescriptors = descriptors;
-                    await createdPhoto.save();
-                    console.log(`[Photo] Updated DB with descriptors for: ${createdPhoto._id}`);
-                }
-            } catch (aiError) {
-                console.error("[Photo] Background AI Service Failed:", aiError.message);
-                // System continues, photo exists but not searchable by face yet
-            }
-        })();
-        // --- BACKGROUND AI PROCESS END ---
     } catch (error) {
         console.error("Add Photo Error:", error);
         res.status(400).json({ message: error.message || 'Invalid data or AI processing failed' });
