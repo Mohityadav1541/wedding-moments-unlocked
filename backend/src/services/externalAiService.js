@@ -49,12 +49,9 @@ export const getFaceDescriptor = async (imageInput) => {
         }
 
         console.log(`[AI Service] Analyzing Buffer...`);
-        // Use standard 'multipart/form-data'
-        const response = await client.post('/analyze', formData, {
-            headers: {
-                'Content-Type': 'multipart/form-data'
-            }
-        });
+        // Do NOT set Content-Type manually for FormData with axios/fetch, 
+        // it needs to generate the boundary.
+        const response = await client.post('/analyze', formData);
 
         // Response is array of faces
         const faces = response.data;
@@ -66,6 +63,9 @@ export const getFaceDescriptor = async (imageInput) => {
         return null;
     } catch (error) {
         console.error("[AI Service] Error getting descriptor:", error.message);
+        if (error.response) {
+            console.error("[AI Service] Response data:", error.response.data);
+        }
         return null;
     }
 };
@@ -99,17 +99,16 @@ export const getAllFaceDescriptors = async (imageInput) => {
         }
 
         console.log(`[AI Service] Analyzing (All)...`);
-        const response = await client.post('/analyze', formData, {
-            headers: {
-                'Content-Type': 'multipart/form-data'
-            }
-        });
+        const response = await client.post('/analyze', formData);
 
         // Response is array of objects { embedding: [...] }
         const faces = response.data;
         return faces.map(f => f.embedding) || [];
     } catch (error) {
         console.error("[AI Service] Error getting descriptors:", error.message);
+        if (error.response) {
+            console.error("[AI Service] Response data:", error.response.data);
+        }
         return [];
     }
 };
