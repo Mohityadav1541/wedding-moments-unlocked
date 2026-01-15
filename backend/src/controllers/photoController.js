@@ -180,6 +180,8 @@ export const searchPhotos = async (req, res) => {
                 transformation += `/l_text:Arial_60_bold:${text},g_south,y_50,co_white,o_90,b_rgb:00000050,fl_layer_apply`;
             }
 
+            let downloadUrl = photo.url;
+
             if (photo.url.includes('/upload/')) {
                 const parts = photo.url.split('/upload/');
                 downloadUrl = `${parts[0]}/upload/${transformation}/${parts[1]}`;
