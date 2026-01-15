@@ -44,7 +44,15 @@ app.use('/api/photos', photoRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/content', landingContentRoutes);
 app.use('/api/transactions', transactionRoutes);
-console.log('Registered /api/content route');
+
+// Also mount on root in case Vercel rewrites strip the /api prefix
+app.use('/auth', authRoutes);
+app.use('/events', eventRoutes);
+app.use('/photos', photoRoutes);
+app.use('/users', userRoutes);
+app.use('/content', landingContentRoutes);
+app.use('/transactions', transactionRoutes);
+console.log('Registered routes on /api/* and /*');
 
 app.get('/', (req, res) => {
     res.send('API is running...');
