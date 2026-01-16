@@ -62,8 +62,10 @@ const userSchema = new mongoose.Schema({
         type: Number, // In days
         default: 0
     },
-    upiId: {
-        type: String // For receiving payments (studio) or verification (user)
+    paymentDetails: {
+        upiId: { type: String },
+        mobileNumber: { type: String },
+        name: { type: String } // Payee Name
     }
 }, {
     timestamps: true,

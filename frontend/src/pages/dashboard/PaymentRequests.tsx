@@ -8,6 +8,7 @@ import api from "@/lib/api";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 
+// Interface matches backend model
 interface UnlockRequest {
     _id: string;
     event: {
@@ -22,7 +23,7 @@ interface UnlockRequest {
     createdAt: string;
 }
 
-const Payments = () => {
+const PaymentRequests = () => {
     const userRole = JSON.parse(localStorage.getItem('user') || '{}').role || 'admin';
     const [requests, setRequests] = useState<UnlockRequest[]>([]);
     const [loading, setLoading] = useState(true);
@@ -39,8 +40,7 @@ const Payments = () => {
             setRequests(data);
         } catch (error) {
             console.error("Fetch requests error", error);
-            // toast.error("Failed to load payment requests"); 
-            // Silent fail is better if it's just empty or 404 initially
+            toast.error("Failed to load payment requests");
         } finally {
             setLoading(false);
         }
@@ -51,6 +51,7 @@ const Payments = () => {
         try {
             await api.put(`/unlock/${id}/status`, { status: newStatus });
 
+            // Optimistic update
             setRequests(prev => prev.map(req =>
                 req._id === id ? { ...req, status: newStatus } : req
             ));
@@ -86,7 +87,7 @@ const Payments = () => {
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
                     <div>
                         <h1 className="font-display text-2xl font-bold">Payment Requests</h1>
-                        <p className="text-muted-foreground">Verify and approve guest payments (UPI) to unlock photos.</p>
+                        <p className="text-muted-foreground">Verify and approve guest payments (UPI).</p>
                     </div>
                 </div>
 
@@ -95,7 +96,7 @@ const Payments = () => {
                     <div className="relative max-w-sm w-full">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input
-                            placeholder="Search by ID or Email..."
+                            placeholder="Search by Transaction ID or Email..."
                             className="pl-9"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
@@ -110,7 +111,7 @@ const Payments = () => {
                                 <TableHead>Date</TableHead>
                                 <TableHead>Event</TableHead>
                                 <TableHead>Guest</TableHead>
-                                <TableHead>Transaction</TableHead>
+                                <TableHead>Transaction Details</TableHead>
                                 <TableHead>Amount</TableHead>
                                 <TableHead>Status</TableHead>
                                 <TableHead className="text-right">Actions</TableHead>
@@ -139,7 +140,9 @@ const Payments = () => {
                                             </div>
                                         </TableCell>
                                         <TableCell>
-                                            <code className="bg-muted px-2 py-1 rounded text-xs">{req.transactionId}</code>
+                                            <div className="flex items-center gap-2">
+                                                <code className="bg-muted px-2 py-1 rounded text-xs">{req.transactionId}</code>
+                                            </div>
                                         </TableCell>
                                         <TableCell>
                                             <span className="font-bold text-primary">₹{req.totalAmount}</span>
@@ -161,7 +164,6 @@ const Payments = () => {
                                                         className="h-8 w-8 p-0 bg-green-500 hover:bg-green-600"
                                                         onClick={() => handleStatusUpdate(req._id, 'approved')}
                                                         disabled={processingId === req._id}
-                                                        title="Approve"
                                                     >
                                                         {processingId === req._id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
                                                     </Button>
@@ -171,7 +173,6 @@ const Payments = () => {
                                                         className="h-8 w-8 p-0"
                                                         onClick={() => handleStatusUpdate(req._id, 'rejected')}
                                                         disabled={processingId === req._id}
-                                                        title="Reject"
                                                     >
                                                         {processingId === req._id ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
                                                     </Button>
@@ -189,4 +190,4 @@ const Payments = () => {
     );
 };
 
-export default Payments;
+export default PaymentRequests;

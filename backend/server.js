@@ -1,5 +1,6 @@
 import express from 'express';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import dns from 'dns';
 // Force IPv4 and Google DNS to bypass local network restrictions
 dns.setDefaultResultOrder('ipv4first');
@@ -19,6 +20,7 @@ import photoRoutes from './src/routes/photoRoutes.js';
 import userRoutes from './src/routes/userRoutes.js';
 import landingContentRoutes from './src/routes/landingContentRoutes.js';
 import transactionRoutes from './src/routes/transactionRoutes.js';
+import unlockRoutes from './src/routes/unlockRoutes.js';
 
 dotenv.config();
 
@@ -44,6 +46,7 @@ app.use('/api/photos', photoRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/content', landingContentRoutes);
 app.use('/api/transactions', transactionRoutes);
+app.use('/api/unlock', unlockRoutes);
 
 // Also mount on root in case Vercel rewrites strip the /api prefix
 app.use('/auth', authRoutes);
@@ -52,6 +55,7 @@ app.use('/photos', photoRoutes);
 app.use('/users', userRoutes);
 app.use('/content', landingContentRoutes);
 app.use('/transactions', transactionRoutes);
+app.use('/unlock', unlockRoutes);
 console.log('Registered routes on /api/* and /*');
 
 app.get('/', (req, res) => {
@@ -72,6 +76,9 @@ app.use((err, req, res, next) => {
 });
 
 
-app.listen(port, () => console.log(`Server started on port ${port}`));
+// Only start the server if this file is run directly (not imported)
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+    app.listen(port, () => console.log(`Server started on port ${port}`));
+}
 
 export default app;

@@ -19,7 +19,14 @@ interface EventData {
 
   price?: number; // Package Price
   pricePerPhoto?: number; // Download Price
-  user?: { name: string };
+  user?: {
+    name: string;
+    paymentDetails?: {
+      upiId: string;
+      mobileNumber: string;
+      name: string;
+    };
+  };
   features?: {
     watermarkEnabled: boolean;
     watermarkText: string;
@@ -308,7 +315,9 @@ const EventPage = () => {
               photos={matchedPhotos}
               photoPrice={event.pricePerPhoto || 0}
               photographerName={event.user?.name || "Wedding Moment AI"}
+              paymentDetails={event.user?.paymentDetails}
               watermarkEnabled={event.features?.watermarkEnabled ?? true}
+              eventId={event._id}
             />
           </div>
         )}

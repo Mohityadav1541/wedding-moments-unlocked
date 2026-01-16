@@ -1,25 +1,28 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Download, Lock, ShoppingCart, Check, X } from "lucide-react";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Download, Check, X as XIcon } from "lucide-react";
 import { toast } from "sonner";
+import { addWatermark } from "@/utils/watermark";
 
 interface Photo {
-  _id: string; // Backend ID
-  id?: string; // Legacy/Mock ID
+  _id: string;
+  id?: string;
   url: string;
-  downloadUrl?: string; // Watermarked URL
+  downloadUrl?: string; // High-res or original URL
   confidence: number;
 }
 
 interface PhotoGalleryProps {
   photos: Photo[];
-  photoPrice: number;
+  photoPrice: number; // meaningful only if we wanted to show value, but now ignored
   photographerName: string;
   watermarkEnabled: boolean;
+  paymentDetails?: any; // Ignored
+  eventId: string;
 }
 
-const PhotoGallery = ({ photos, photoPrice, photographerName, watermarkEnabled }: PhotoGalleryProps) => {
+const PhotoGallery = ({ photos, photographerName, watermarkEnabled }: PhotoGalleryProps) => {
   const [selectedPhotos, setSelectedPhotos] = useState<Set<string>>(new Set());
   const [previewPhoto, setPreviewPhoto] = useState<Photo | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -42,25 +45,35 @@ const PhotoGallery = ({ photos, photoPrice, photographerName, watermarkEnabled }
     }
   };
 
-  const handleDownloadFree = async () => {
+  const handleDownload = async () => {
     setIsDownloading(true);
-
-    // Find selected photo objects
     const photosToDownload = photos.filter(p => selectedPhotos.has(p._id || p.id || ""));
-
     let successCount = 0;
+
+    toast.info(`Preparing ${photosToDownload.length} photos with watermark...`);
+
     for (const photo of photosToDownload) {
+      // Prioritize downloadUrl (original/high-res), fallback to url (display)
       const targetUrl = photo.downloadUrl || photo.url;
+
       if (targetUrl) {
         try {
-          // Fetch blob to avoid browser opening in new tab
-          const response = await fetch(targetUrl);
-          const blob = await response.blob();
+          // If watermark enabled, burn it. Else just blob it.
+          // Note: "watermarkEnabled" prop comes from Event features. 
+          // If user turned it on, we use it.
+          let blob: Blob;
+
+          if (watermarkEnabled) {
+            blob = await addWatermark(targetUrl, photographerName || "Wedding Moments");
+          } else {
+            const response = await fetch(targetUrl);
+            blob = await response.blob();
+          }
+
           const url = window.URL.createObjectURL(blob);
           const a = document.createElement('a');
           a.style.display = 'none';
           a.href = url;
-          // Suggest filename
           a.download = `photo-${photo._id || Date.now()}.jpg`;
           document.body.appendChild(a);
           a.click();
@@ -69,28 +82,14 @@ const PhotoGallery = ({ photos, photoPrice, photographerName, watermarkEnabled }
           successCount++;
         } catch (err) {
           console.error("Download failed", err);
-          // Fallback to opening in new tab
+          // Fallback to direct open if canvas fails
           window.open(targetUrl, '_blank');
         }
       }
     }
-
     setIsDownloading(false);
-    if (successCount > 0) {
-      toast.success(`${successCount} photos downloaded!`);
-    } else {
-      toast.error("No photos available for download.");
-    }
+    if (successCount > 0) toast.success(`${successCount} photos downloaded!`);
   };
-
-
-
-
-  const handleBuyPremium = () => {
-    toast.info("Feature coming soon");
-  };
-
-  const isFree = photoPrice === 0;
 
   return (
     <div>
@@ -98,11 +97,7 @@ const PhotoGallery = ({ photos, photoPrice, photographerName, watermarkEnabled }
       <div className="bg-card rounded-xl p-4 shadow-card border border-border/50 mb-6 sticky top-20 z-40">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={selectAll}
-            >
+            <Button variant="outline" size="sm" onClick={selectAll}>
               {selectedPhotos.size === photos.length ? "Deselect All" : "Select All"}
             </Button>
             <span className="font-body text-sm text-muted-foreground">
@@ -111,28 +106,19 @@ const PhotoGallery = ({ photos, photoPrice, photographerName, watermarkEnabled }
           </div>
 
           {selectedPhotos.size > 0 && (
-            <div className="flex gap-3">
-              {isFree ? (
-                <Button
-                  variant="sage"
-                  onClick={handleDownloadFree}
-                  disabled={isDownloading}
-                  className="gap-2"
-                >
-                  {isDownloading ? (
-                    <div className="h-4 w-4 border-2 border-foreground border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <Download className="h-4 w-4" />
-                  )}
-                  {selectedPhotos.size > 1 ? `Download All (${selectedPhotos.size})` : "Download Photo"}
-                </Button>
+            <Button
+              variant="default" // Changed from sage/gold to default/primary
+              onClick={handleDownload}
+              disabled={isDownloading}
+              className="gap-2 bg-green-600 hover:bg-green-700 text-white"
+            >
+              {isDownloading ? (
+                <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
               ) : (
-                <Button variant="gold" onClick={handleBuyPremium} className="gap-2">
-                  <ShoppingCart className="h-4 w-4" />
-                  Buy HD (₹{photoPrice * selectedPhotos.size})
-                </Button>
+                <Download className="h-4 w-4" />
               )}
-            </div>
+              {selectedPhotos.size > 1 ? `Download All (${selectedPhotos.size})` : "Download Photo"}
+            </Button>
           )}
         </div>
       </div>
@@ -149,39 +135,38 @@ const PhotoGallery = ({ photos, photoPrice, photographerName, watermarkEnabled }
                 : "border-transparent hover:border-primary/50"
                 }`}
             >
-              {/* Photo */}
-              <div
-                className="aspect-square"
-                onClick={() => setPreviewPhoto(photo)}
-              >
+              <div className="aspect-square" onClick={() => setPreviewPhoto(photo)}>
                 <img
                   src={photo.url}
                   alt="Wedding photo"
                   className="w-full h-full object-cover"
                 />
 
-                {/* Watermark Overlay */}
-                {watermarkEnabled && (
-                  <div className="watermark-overlay">
-                    <div className="watermark-text">
-                      {photographerName}
-                    </div>
-                  </div>
-                )}
+                {/* Optional: We can still show watermark on thumbnail if desired, 
+                    but since it's "Free Download", clean preview is usually better.
+                    I will remove the watermark overlay for cleaner UI as requested. 
+                */}
 
-                {/* Confidence Badge */}
-                <div className="absolute top-2 left-2 bg-background/80 backdrop-blur-sm px-2 py-1 rounded-full">
-                  <span className="font-body text-xs font-medium text-foreground">
+                <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-sm px-2 py-1 rounded-full">
+                  <span className="text-xs font-medium text-white">
                     {photo.confidence}% match
                   </span>
                 </div>
+
+                {/* Bottom Watermark - Visual Only */}
+                {watermarkEnabled && (
+                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-3 pt-6 flex justify-end">
+                    <span className="text-xs text-white/90 font-medium bg-black/40 px-2 py-0.5 rounded">
+                      {photographerName}
+                    </span>
+                  </div>
+                )}
               </div>
 
-              {/* Select Checkbox */}
               <button
                 className={`absolute top-2 right-2 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${selectedPhotos.has(id)
-                  ? "bg-primary border-primary text-primary-foreground"
-                  : "bg-background/80 border-border hover:border-primary"
+                  ? "bg-primary border-primary text-white"
+                  : "bg-black/40 border-white/50 hover:border-primary hover:bg-primary/20"
                   }`}
                 onClick={(e) => {
                   e.stopPropagation();
@@ -197,56 +182,38 @@ const PhotoGallery = ({ photos, photoPrice, photographerName, watermarkEnabled }
 
       {/* Preview Dialog */}
       <Dialog open={!!previewPhoto} onOpenChange={() => setPreviewPhoto(null)}>
-        <DialogContent className="max-w-3xl p-0 overflow-hidden">
+        <DialogContent className="max-w-3xl p-0 overflow-hidden bg-black/90 border-none">
           {previewPhoto && (
             <>
-              <div className="relative aspect-[4/3]">
+              <div className="relative aspect-[4/3] flex items-center justify-center">
                 <img
-                  src={previewPhoto.url}
-                  alt="Wedding photo preview"
-                  className="w-full h-full object-contain bg-muted"
+                  src={previewPhoto.url} // You might want high-res here if available, but url is usually fine for preview
+                  alt="Preview"
+                  className="max-h-[80vh] w-full object-contain"
                 />
-                {/* Large Watermark */}
-                {watermarkEnabled && (
-                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <p className="font-display text-4xl text-foreground/20 italic rotate-[-15deg] select-none">
-                      {photographerName}
-                    </p>
-                  </div>
-                )}
+
+                {/* Close Button overlay */}
+                <button
+                  onClick={() => setPreviewPhoto(null)}
+                  className="absolute top-4 right-4 bg-black/50 hover:bg-black/70 text-white rounded-full p-2"
+                >
+                  <XIcon className="h-6 w-6" />
+                </button>
               </div>
-              <div className="p-4 flex justify-between items-center border-t border-border">
-                <span className="font-body text-sm text-muted-foreground">
-                  {previewPhoto.confidence}% match confidence
+
+              <div className="p-4 bg-background flex justify-between items-center">
+                <span className="text-sm font-medium">
+                  {previewPhoto.confidence}% Match Confidence
                 </span>
                 <div className="flex gap-2">
                   <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setPreviewPhoto(null)}
-                  >
-                    Close
-                  </Button>
-                  <Button
-                    variant="rose"
-                    size="sm"
+                    variant={selectedPhotos.has(previewPhoto._id || "") ? "destructive" : "default"}
                     onClick={() => {
                       toggleSelect(previewPhoto._id || previewPhoto.id || "");
                       setPreviewPhoto(null);
                     }}
-                    className="gap-2"
                   >
-                    {selectedPhotos.has(previewPhoto._id || previewPhoto.id || "") ? (
-                      <>
-                        <X className="h-4 w-4" />
-                        Remove from Selection
-                      </>
-                    ) : (
-                      <>
-                        <Check className="h-4 w-4" />
-                        Add to Selection
-                      </>
-                    )}
+                    {selectedPhotos.has(previewPhoto._id || "") ? "Remove Selection" : "Select for Download"}
                   </Button>
                 </div>
               </div>
