@@ -45,7 +45,7 @@ const EventPage = () => {
   const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
-    console.log("Running updated version with photoCount fix");
+
     if (eventId) {
       fetchEventDetails();
     }
@@ -222,7 +222,7 @@ const EventPage = () => {
             </div>
             <div className="flex items-center gap-2 text-muted-foreground">
               <Camera className="h-4 w-4 text-primary" />
-              <span className="font-body text-sm">{event.photoCount || 0} Event Photos</span>
+              <span className="font-body text-sm">{event.photoCount || 0} Photos</span>
             </div>
           </div>
         </div>
