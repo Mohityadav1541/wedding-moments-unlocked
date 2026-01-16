@@ -256,6 +256,8 @@ export const getPublicEventById = async (req, res) => {
         const event = await Event.findById(req.params.id).populate('user', 'name studioName paymentDetails');
 
         if (event) {
+            const photoCount = await Photo.countDocuments({ event: event._id });
+
             // Return only safe fields for guests
             const publicData = {
                 _id: event._id,
@@ -266,6 +268,7 @@ export const getPublicEventById = async (req, res) => {
                 package: event.package,
                 price: event.price,
                 pricePerPhoto: event.pricePerPhoto || 0,
+                photoCount, // Add count here
                 user: {
                     name: event.user?.name,
                     studioName: event.user?.studioName,
