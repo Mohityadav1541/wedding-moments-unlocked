@@ -7,7 +7,7 @@ import SelfieUpload from "@/components/event/SelfieUpload";
 import { Camera, ArrowRight, Calendar, MapPin, User, Loader2 } from "lucide-react";
 import api from "@/lib/api";
 import { toast } from "sonner";
-import { compressImage } from "@/utils/imageCompression";
+
 
 interface EventData {
   _id: string;
@@ -67,25 +67,7 @@ const EventPage = () => {
     setSelfies((prev) => ({ ...prev, [side]: imageUrl }));
   };
 
-  // Helper to convert base64/dataURL to Blob for upload
-  // kept for fallback or other uses, though detectAndCropFace returns a blob now.
-  const dataURItoBlob = (dataURI: string) => {
-    try {
-      if (!dataURI || !dataURI.includes(',')) return null;
 
-      const byteString = atob(dataURI.split(',')[1]);
-      const mimeString = dataURI.split(',')[0].split(':')[1].split(';')[0];
-      const ab = new ArrayBuffer(byteString.length);
-      const ia = new Uint8Array(ab);
-      for (let i = 0; i < byteString.length; i++) {
-        ia[i] = byteString.charCodeAt(i);
-      }
-      return new Blob([ab], { type: mimeString });
-    } catch (e) {
-      console.error("Data URI conversion failed", e);
-      return null;
-    }
-  };
 
   useEffect(() => {
     // Load models when component mounts
