@@ -253,7 +253,7 @@ export const getEventById = async (req, res) => {
 // @access  Public
 export const getPublicEventById = async (req, res) => {
     try {
-        const event = await Event.findById(req.params.id).populate('user', 'name paymentDetails');
+        const event = await Event.findById(req.params.id).populate('user', 'name studioName paymentDetails');
 
         if (event) {
             // Return only safe fields for guests
@@ -268,8 +268,10 @@ export const getPublicEventById = async (req, res) => {
                 pricePerPhoto: event.pricePerPhoto || 0,
                 user: {
                     name: event.user?.name,
+                    studioName: event.user?.studioName,
                     paymentDetails: event.user?.paymentDetails
                 },
+                features: event.features,
                 photos: []
             };
             res.json(publicData);

@@ -21,6 +21,7 @@ interface EventData {
   pricePerPhoto?: number; // Download Price
   user?: {
     name: string;
+    studioName?: string;
     paymentDetails?: {
       upiId: string;
       mobileNumber: string;
@@ -314,7 +315,7 @@ const EventPage = () => {
             <PhotoGallery
               photos={matchedPhotos}
               photoPrice={event.pricePerPhoto || 0}
-              photographerName={event.user?.name || "Wedding Moment AI"}
+              photographerName={event.features?.watermarkText || event.user?.studioName || event.user?.name || "Wedding Moment AI"}
               paymentDetails={event.user?.paymentDetails}
               watermarkEnabled={event.features?.watermarkEnabled ?? true}
               eventId={event._id}
