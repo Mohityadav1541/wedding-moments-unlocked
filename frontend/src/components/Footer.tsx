@@ -24,7 +24,7 @@ const Footer = () => {
               AI-powered wedding photo discovery. Find your perfect moments instantly with face recognition technology.
             </p>
             <div className="flex gap-4">
-              <a href="#" className="text-background/60 hover:text-primary transition-colors">
+              <a href="https://www.instagram.com/yadav__mohit_0?igsh=MWZwcWUxYXBpdjlsNA==" target="_blank" rel="noreferrer" className="text-background/60 hover:text-primary transition-colors">
                 <Instagram className="h-5 w-5" />
               </a>
               <a href="#" className="text-background/60 hover:text-primary transition-colors">
@@ -101,7 +101,7 @@ const Footer = () => {
               <li className="flex items-start gap-2 text-background/70">
                 <MapPin className="h-4 w-4 text-primary mt-0.5" />
                 <span>
-                  <a href="https://wa.me/qr/OI6DXRUV72ENI1" target="_blank" rel="noreferrer" className="hover:text-primary transition-colors">
+                  <a href="https://wa.me/916367139566" target="_blank" rel="noreferrer" className="hover:text-primary transition-colors">
                     Chat on WhatsApp
                   </a>
                 </span>
