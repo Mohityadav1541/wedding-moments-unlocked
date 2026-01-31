@@ -7,7 +7,7 @@ const Logo = ({ className = "" }: { className?: string }) => {
     <Link to="/" className={`flex items-center gap-2 group ${className}`}>
       <div className="relative h-10 w-10">
         <img
-          src="/logo.png"
+          src="/camera-logo.svg"
           alt="Wedding AI Logo"
           className="h-full w-full object-contain filter drop-shadow-sm group-hover:scale-105 transition-transform duration-300"
         />
