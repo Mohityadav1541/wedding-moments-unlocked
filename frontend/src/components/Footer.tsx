@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import Logo from "./Logo";
-import { Camera, Mail, Phone, MapPin, Instagram, Facebook, Twitter } from "lucide-react";
+import { Camera, Mail, Phone, MapPin, Instagram, MessageCircle, Twitter } from "lucide-react";
 
 const Footer = () => {
   return (
@@ -27,8 +27,8 @@ const Footer = () => {
               <a href="https://www.instagram.com/yadav__mohit_0?igsh=MWZwcWUxYXBpdjlsNA==" target="_blank" rel="noreferrer" className="text-background/60 hover:text-primary transition-colors">
                 <Instagram className="h-5 w-5" />
               </a>
-              <a href="#" className="text-background/60 hover:text-primary transition-colors">
-                <Facebook className="h-5 w-5" />
+              <a href="https://wa.me/916367139566" target="_blank" rel="noreferrer" className="text-background/60 hover:text-primary transition-colors">
+                <MessageCircle className="h-5 w-5" />
               </a>
               <a href="#" className="text-background/60 hover:text-primary transition-colors">
                 <Twitter className="h-5 w-5" />
