@@ -112,7 +112,7 @@ const Footer = () => {
 
         <div className="border-t border-white/10 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-white/60 text-sm font-body">
-            © 2024 Wedding AI Photo Finder. All rights reserved.
+            Made by @Mohit Yadav
           </p>
           <div className="flex gap-6 text-sm font-body">
             <a href="#" className="text-background/50 hover:text-primary transition-colors">
