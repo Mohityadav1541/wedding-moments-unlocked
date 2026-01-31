@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import Logo from "./Logo";
-import { Heart, Mail, Phone, MapPin, Instagram, Facebook, Twitter } from "lucide-react";
+import { Camera, Mail, Phone, MapPin, Instagram, Facebook, Twitter } from "lucide-react";
 
 const Footer = () => {
   return (
@@ -10,7 +10,7 @@ const Footer = () => {
           {/* Brand */}
           <div className="space-y-4">
             <div className="flex items-center gap-2">
-              <Heart className="h-8 w-8 text-primary fill-primary/30" />
+              <Camera className="h-8 w-8 text-primary fill-primary/30" />
               <div className="flex flex-col">
                 <span className="font-display text-xl font-semibold leading-tight">
                   Wedding AI

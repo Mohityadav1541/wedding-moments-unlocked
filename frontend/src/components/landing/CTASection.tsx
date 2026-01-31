@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { ArrowRight, Heart } from "lucide-react";
+import { ArrowRight, Camera } from "lucide-react";
 
 const CTASection = () => {
   return (
@@ -12,7 +12,7 @@ const CTASection = () => {
       <div className="container mx-auto px-4 relative z-10">
         <div className="max-w-3xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 bg-background/10 rounded-full px-4 py-2 mb-6">
-            <Heart className="h-4 w-4 text-primary fill-primary/50" />
+            <Camera className="h-4 w-4 text-primary fill-primary/50" />
             <span className="text-background/80 font-body text-sm">Join the wedding photography revolution</span>
           </div>
 
