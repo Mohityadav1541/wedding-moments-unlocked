@@ -6,14 +6,29 @@ import User from '../models/User.js';
 // @access  Private
 export const createTransaction = async (req, res) => {
     try {
-        const { plan, amount, upiTransactionId, screenshot } = req.body;
+        const { plan, amount, upiTransactionId, screenshot, mobileNumber } = req.body;
+
+        // Validate mobile number (exactly 10 digits)
+        if (!mobileNumber || !/^[0-9]{10}$/.test(mobileNumber)) {
+            return res.status(400).json({
+                message: 'Mobile number must be exactly 10 digits'
+            });
+        }
+
+        // Validate UPI Transaction ID (mandatory, 12 digits)
+        if (!upiTransactionId || !/^[0-9]{12}$/.test(upiTransactionId)) {
+            return res.status(400).json({
+                message: 'UPI Transaction ID must be exactly 12 digits'
+            });
+        }
 
         const transaction = new Transaction({
             user: req.user._id,
             plan,
             amount,
             upiTransactionId,
-            screenshot // Optional Cloudinary URL
+            screenshot, // Optional Cloudinary URL
+            mobileNumber
         });
 
         const createdTransaction = await transaction.save();
