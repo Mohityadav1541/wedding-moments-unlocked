@@ -229,6 +229,22 @@ const ManageEvent = () => {
                         </div>
                     </div>
                     <div className="flex gap-3">
+                        <Button
+                            variant="default"
+                            className="bg-yellow-500 hover:bg-yellow-600 text-white"
+                            onClick={async () => {
+                                try {
+                                    toast.info("Starting AI Re-scan... this may take a minute.");
+                                    const res = await api.post('/photos/rescan', { eventId });
+                                    toast.success(res.data.message);
+                                } catch (err) {
+                                    console.error(err);
+                                    toast.error("Re-scan failed. AI service might still be down.");
+                                }
+                            }}
+                        >
+                            Fix / Re-scan AI
+                        </Button>
                         <Button variant="outline" asChild>
                             <Link to={`/event/${eventId}`} target="_blank">
                                 View Public Page
