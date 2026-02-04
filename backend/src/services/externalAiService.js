@@ -8,7 +8,10 @@ dotenv.config();
 const API_URL = process.env.HUGGING_FACE_API_URL;
 // Euclidean distance threshold for face matching
 // 0.6 is the standard threshold for dlib/face_recognition
-const MATCH_THRESHOLD = 0.6;
+// Lowered to 0.5 to reduce false positives
+// Increased back to 0.6 because 0.5 was too loose (user reported 19 false positives)
+// Increased to 0.7 because 0.6 still matched different people (Biden vs Obama)
+export const MATCH_THRESHOLD = 0.7;
 
 const getClient = () => {
     if (!API_URL) {
@@ -17,112 +20,124 @@ const getClient = () => {
     }
     return axios.create({
         baseURL: API_URL,
-        timeout: 30000
+        timeout: 60000 // Increased timeout to 60s
     });
 };
+
+/**
+ * Helper delay function
+ */
+const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 /**
  * Get descriptor for a single face in the image (Buffer or Path).
  * Now supports Buffers for privacy (no storage).
  */
-export const getFaceDescriptor = async (imageInput) => {
-    try {
-        const client = getClient();
-        if (!client) return null;
+export const getFaceDescriptor = async (imageInput, retries = 3) => {
+    for (let i = 0; i < retries; i++) {
+        try {
+            const client = getClient();
+            if (!client) return null;
 
-        const formData = new FormData();
+            if (typeof imageInput === 'string' && imageInput.startsWith('http')) {
+                console.log(`[AI Service] Analyzing Single URL: ${imageInput} (Attempt ${i + 1}/${retries})...`);
+                const response = await client.post('/analyze-url', { url: imageInput });
+                const data = response.data;
 
-        if (Buffer.isBuffer(imageInput)) {
-            formData.append('file', imageInput, 'image.jpg');
-        } else if (typeof imageInput === 'string') {
-            console.warn("[AI Service] String path support deprecated for search. Use Buffer.");
+                // Expecting { descriptors: [ ... ] } or [ { embedding: ... } ]
+                if (data.descriptors && Array.isArray(data.descriptors) && data.descriptors.length > 0) {
+                    return data.descriptors[0];
+                }
+                if (Array.isArray(data) && data.length > 0 && data[0].embedding) {
+                    return data[0].embedding;
+                }
+                return null;
+            }
+
+            console.warn("[AI Service] Buffer not supported on /analyze-url. Returning NULL.");
             return null;
-        } else {
-            return null;
+        } catch (error) {
+            console.error(`[AI Service] Attempt ${i + 1} failed:`, error.message);
+            if (error.response) {
+                console.error("[AI Service] Response data:", error.response.data);
+            }
+
+            if (i === retries - 1) {
+                console.error("[AI Service] All retries failed. Returning null.");
+                return null;
+            }
+            console.log(`[AI Service] Retrying in 2 seconds...`);
+            await delay(2000);
         }
-
-        console.log(`[AI Service] Analyzing Buffer...`);
-
-        // Pass headers from form-data to axios
-        // Endpoint: /analyze-file (from app.py)
-        const response = await client.post('/analyze-file', formData, {
-            headers: formData.getHeaders()
-        });
-
-        // Response format: { descriptors: [ [128 floats], ... ] }
-        const data = response.data;
-
-        if (data && data.descriptors && data.descriptors.length > 0) {
-            return data.descriptors[0];
-        }
-        return null;
-    } catch (error) {
-        console.error("[AI Service] Error getting descriptor:", error.message);
-        if (error.response) {
-            console.error("[AI Service] Response data:", error.response.data);
-        }
-        return null;
     }
 };
 
 /**
  * Get all face descriptors from an image.
  */
-export const getAllFaceDescriptors = async (imageInput) => {
-    try {
-        const client = getClient();
-        if (!client) return [];
+export const getAllFaceDescriptors = async (imageInput, retries = 3) => {
+    for (let i = 0; i < retries; i++) {
+        try {
+            const client = getClient();
+            if (!client) return [];
 
-        const formData = new FormData();
+            if (typeof imageInput === 'string' && imageInput.startsWith('http')) {
+                console.log(`[AI Service] Analyzing URL: ${imageInput} (Attempt ${i + 1}/${retries})...`);
+                const response = await client.post('/analyze-url', { url: imageInput });
+                const data = response.data;
 
-        if (typeof imageInput === 'string' && imageInput.startsWith('http')) {
-            const res = await fetch(imageInput);
-            const buffer = await res.buffer();
-            formData.append('file', buffer, 'image.jpg');
-        } else if (Buffer.isBuffer(imageInput)) {
-            formData.append('file', imageInput, 'image.jpg');
-        } else {
-            // Assume buffer or fail
-            console.warn("[AI Service] getAllFaceDescriptors requires URL or Buffer");
-            return [];
+                if (data.descriptors && Array.isArray(data.descriptors)) {
+                    return data.descriptors;
+                }
+                if (Array.isArray(data)) return data.map(face => face.embedding);
+
+                return [];
+            } else {
+                console.warn("[AI Service] Buffer/File not supported on /analyze-url. Skipping.");
+                return [];
+            }
+        } catch (error) {
+            console.error(`[AI Service] Attempt ${i + 1} failed:`, error.message);
+            if (error.response) {
+                console.error("[AI Service] Response data:", error.response.data);
+            }
+            if (i === retries - 1) return [];
+            await delay(2000);
         }
-
-        console.log(`[AI Service] Analyzing (All)...`);
-
-        // Endpoint: /analyze-file
-        const response = await client.post('/analyze-file', formData, {
-            headers: formData.getHeaders()
-        });
-
-        const data = response.data;
-        // API returns { descriptors: ... }
-        return data.descriptors || [];
-    } catch (error) {
-        console.error("[AI Service] Error getting descriptors:", error.message);
-        if (error.response) {
-            console.error("[AI Service] Response data:", error.response.data);
-        }
-        return [];
     }
 };
 
 /**
- * Check if two descriptors match.
- * Descriptors are arrays of numbers (vectors).
+ * Calculate Cosine Similarity between two descriptors.
+ * Returns a value between -1 and 1.
+ * 1.0 means identical.
+ */
+export const getCosineSimilarity = (descriptor1, descriptor2) => {
+    if (!descriptor1 || !descriptor2 || descriptor1.length !== descriptor2.length) {
+        return -1.0; // Invalid
+    }
+
+    let dotProduct = 0;
+    let normA = 0;
+    let normB = 0;
+
+    for (let i = 0; i < descriptor1.length; i++) {
+        dotProduct += descriptor1[i] * descriptor2[i];
+        normA += descriptor1[i] * descriptor1[i];
+        normB += descriptor2[i] * descriptor2[i];
+    }
+
+    if (normA === 0 || normB === 0) return 0;
+
+    return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+};
+
+/**
+ * Check match with new threshold
+ * Threshold: > 0.6 is usually a good match for ArcFace (buffalo_s).
  */
 export const isMatch = (descriptor1, descriptor2) => {
-    if (!descriptor1 || !descriptor2 || descriptor1.length !== descriptor2.length) {
-        return false;
-    }
-
-    // Euclidean distance calculation
-    let sum = 0;
-    for (let i = 0; i < descriptor1.length; i++) {
-        const diff = descriptor1[i] - descriptor2[i];
-        sum += diff * diff;
-    }
-    const distance = Math.sqrt(sum);
-
-    console.log(`[AI Match] Distance: ${distance.toFixed(4)} (Threshold: ${MATCH_THRESHOLD})`);
-    return distance < MATCH_THRESHOLD;
+    const similarity = getCosineSimilarity(descriptor1, descriptor2);
+    // console.log(`[AI Match] Similarity: ${similarity.toFixed(4)} (Threshold: > 0.6)`);
+    return similarity > MATCH_THRESHOLD;
 };
