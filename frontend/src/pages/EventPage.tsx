@@ -125,7 +125,7 @@ const EventPage = () => {
           console.warn("No face detected in client, sending original as fallback.");
           // FALLBACK: Send original image
           formData.append("images", blob, "selfie_original.jpg");
-          toast.info("Using original selfie (client detection skipped).");
+          // toast.info("Using original selfie (client detection skipped)."); // Removed to avoid user confusion
         }
       };
 
