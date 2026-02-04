@@ -84,6 +84,56 @@ def compute_cosine_similarity(embed1, embed2):
         return 0.0
     return np.dot(embed1, embed2) / (norm1 * norm2)
 
+# --- Imports ---
+import requests
+from pydantic import BaseModel
+
+# --- Request Models ---
+class AnalysisRequest(BaseModel):
+    url: str
+
+@app.post("/analyze-url")
+async def analyze_url_endpoint(request: AnalysisRequest):
+    """
+    Downloads an image from a URL and returns face descriptors.
+    Used by the Backend to process Cloudinary images.
+    """
+    url = request.url
+    if not url:
+        raise HTTPException(status_code=400, detail="No URL provided")
+
+    try:
+        # Download image
+        # Timeout is important to prevent hanging
+        resp = requests.get(url, timeout=10)
+        resp.raise_for_status()
+        
+        file_bytes = resp.content
+        img_cv = process_image(file_bytes)
+
+        # Inference (Lazy Load)
+        face_model = get_model()
+        faces = face_model.get(img_cv)
+
+        if len(faces) == 0:
+            return {"descriptors": []}
+        
+        # Return all found faces (descriptors)
+        # Convert numpy floats to native python floats for JSON serialization
+        descriptors = [face.embedding.tolist() for face in faces]
+        
+        return {
+            "descriptors": descriptors,
+            "count": len(faces)
+        }
+
+    except requests.exceptions.RequestException as e:
+        print(f"Failed to download image: {url} - {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Failed to download image: {str(e)}")
+    except Exception as e:
+        print(f"Analysis failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
+
 # --- Endpoints ---
 
 @app.get("/")
