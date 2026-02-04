@@ -53,7 +53,7 @@ export const isValidDescriptor = (descriptor) => {
     return true;
 };
 
-export const getFaceDescriptor = async (imageInput, retries = 3) => {
+export const getFaceDescriptor = async (imageInput, retries = 15) => {
     for (let i = 0; i < retries; i++) {
         try {
             const client = getClient();
@@ -80,15 +80,15 @@ export const getFaceDescriptor = async (imageInput, retries = 3) => {
             console.warn("[AI Service] Buffer not supported on /analyze-url. Returning NULL.");
             return null;
         } catch (error) {
-            console.error(`[AI Service] Attempt ${i + 1} failed:`, error.message);
+            console.warn(`[AI Service] Attempt ${i + 1} failed. Retrying in 4s...`);
             if (i === retries - 1) return null;
-            await delay(2000);
+            await delay(4000);
         }
     }
     return null;
 };
 
-export const getAllFaceDescriptors = async (imageInput, retries = 3) => {
+export const getAllFaceDescriptors = async (imageInput, retries = 15) => {
     for (let i = 0; i < retries; i++) {
         try {
             const client = getClient();
@@ -113,9 +113,9 @@ export const getAllFaceDescriptors = async (imageInput, retries = 3) => {
                 return [];
             }
         } catch (error) {
-            console.error(`[AI Service] Attempt ${i + 1} failed:`, error.message);
+            console.warn(`[AI Service] Attempt ${i + 1} failed (503/Error). Retrying in 4s...`);
             if (i === retries - 1) return [];
-            await delay(2000);
+            await delay(4000); // Wait 4s between retries (Total ~60s patience)
         }
     }
     return [];
