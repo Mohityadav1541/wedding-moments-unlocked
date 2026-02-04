@@ -6,8 +6,8 @@ import fetch from 'node-fetch';
 dotenv.config();
 
 const API_URL = process.env.HUGGING_FACE_API_URL;
-// Increased to 0.8 because low quality images were generating generic vectors
-export const MATCH_THRESHOLD = 0.8;
+// Increased to 0.9 because 0.8 still matched different people (Weak AI Model)
+export const MATCH_THRESHOLD = 0.9;
 
 const getClient = () => {
     if (!API_URL) {

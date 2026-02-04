@@ -339,3 +339,17 @@ export const deletePhotos = async (req, res) => {
         res.status(500).json({ message: 'Server Error during batch delete' });
     }
 };
+
+// @desc    Reset AI Data (Clear Descriptors)
+// @route   GET /api/photos/reset-ai-data
+// @access  Public (Temporary for debugging)
+export const resetAIData = async (req, res) => {
+    try {
+        const result = await Photo.updateMany({}, { $set: { faceDescriptors: [] } });
+        console.log(`[Reset] Cleared descriptors for ${result.modifiedCount} photos.`);
+        res.json({ message: `Success. Cleared descriptors for ${result.modifiedCount} photos. You can now re-upload to re-scan.` });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Error resetting data' });
+    }
+};
