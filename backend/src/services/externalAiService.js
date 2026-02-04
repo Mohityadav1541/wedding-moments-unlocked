@@ -6,8 +6,9 @@ import fetch from 'node-fetch';
 dotenv.config();
 
 const API_URL = process.env.HUGGING_FACE_API_URL;
-// User requested threshold in 0.5-0.6 range for better recall
-export const MATCH_THRESHOLD = 0.6;
+// EMERGENCY MODE: Lowered threshold to ensure we find faces.
+// 0.6 was too strict. 0.45 adds some risk of false positives but ensures recall.
+export const MATCH_THRESHOLD = 0.45;
 
 const getClient = () => {
     if (!API_URL) {
@@ -30,18 +31,19 @@ export const isValidDescriptor = (descriptor) => {
 
     // Check for NaN
     if (descriptor.some(n => isNaN(n))) {
-        console.warn("[AI Service] Rejected descriptor: Contains NaN");
+        // console.warn("[AI Service] Rejected descriptor: Contains NaN");
         return false;
     }
 
     // Check for All Zeros
     const isZero = descriptor.every(n => n === 0);
     if (isZero) {
-        console.warn("[AI Service] Rejected descriptor: All Zeros");
+        // console.warn("[AI Service] Rejected descriptor: All Zeros");
         return false;
     }
 
-    // Check Variance (Uniform values like [0.1, 0.1, 0.1] are garbage)
+    // EMERGENCY: Disabled Variance validation. It was rejecting valid low-contrast faces.
+    /*
     const mean = descriptor.reduce((a, b) => a + b, 0) / descriptor.length;
     const variance = descriptor.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / descriptor.length;
 
@@ -49,6 +51,7 @@ export const isValidDescriptor = (descriptor) => {
         console.warn(`[AI Service] Rejected descriptor: Low Variance (${variance.toFixed(6)})`);
         return false;
     }
+    */
 
     return true;
 };

@@ -191,7 +191,7 @@ export const searchPhotos = async (req, res) => {
         });
 
         // Filter by threshold
-        // Using centralized MATCH_THRESHOLD from externalAiService (0.6)
+        // Using centralized MATCH_THRESHOLD from externalAiService (0.45 for Emergency Mode)
         const matches = potentialMatches.filter(item => {
             if (item.maxSimilarity > MATCH_THRESHOLD) {
                 return true;
