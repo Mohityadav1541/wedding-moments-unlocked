@@ -212,10 +212,9 @@ export const searchPhotos = async (req, res) => {
             // Base Transformation: Always resize to 1080px width (High Quality Mobile)
             let transformation = 'w_1080,c_limit,q_auto,f_auto';
 
-            // Watermark Logic:
-            // 1. Must be enabled in event features
-            // 2. AND Price must be > 0 (If free, no watermark)
-            const shouldWatermark = eventFeatures.watermarkEnabled && (event.pricePerPhoto > 0);
+            // Watermark Logic: Always apply watermark with photographer's business name
+            // Text comes from event.features.watermarkText (set per event)
+            const shouldWatermark = eventFeatures.watermarkEnabled;
 
             if (shouldWatermark) {
                 const text = encodeURIComponent(eventFeatures.watermarkText || 'Wedding Moments AI');
