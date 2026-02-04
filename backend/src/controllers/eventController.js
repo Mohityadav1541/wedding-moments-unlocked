@@ -219,12 +219,9 @@ export const getRevenueStats = async (req, res) => {
     }
 };
 
-// @desc    Get event by ID
-// @route   GET /api/events/:id (PRIVATE)
-// @access  Private/Admin
 export const getEventById = async (req, res) => {
     try {
-        const event = await Event.findById(req.params.id).populate('user', 'name email');
+        const event = await Event.findById(req.params.id).populate('user', 'name email photoLimit');
 
         if (event) {
             // Check ownership
@@ -238,7 +235,12 @@ export const getEventById = async (req, res) => {
                     return res.status(401).json({ message: 'Not authorized' });
                 }
             }
-            res.json(event);
+
+            // Add photoLimit from user to event response
+            const eventData = event.toObject();
+            eventData.photoLimit = event.user?.photoLimit || null;
+
+            res.json(eventData);
         } else {
             res.status(404).json({ message: 'Event not found' });
         }
