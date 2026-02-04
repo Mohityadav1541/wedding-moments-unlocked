@@ -42,7 +42,7 @@ const reprocessPhotos = async () => {
                     // OPTIMIZATION: Use smaller image
                     let aiUrl = photo.url;
                     if (aiUrl.includes('/upload/')) {
-                        aiUrl = aiUrl.replace('/upload/', '/upload/w_800,q_auto,f_auto/');
+                        aiUrl = aiUrl.replace('/upload/', '/upload/w_800,c_limit,q_auto/');
                     }
 
                     const descriptors = await getAllFaceDescriptors(aiUrl);

@@ -19,39 +19,38 @@ const testAi = async () => {
         const buffer = await res.buffer();
         console.log(`Got image buffer: ${buffer.length} bytes`);
 
-        const form = new FormData();
-        form.append('file', buffer, 'test.jpg');
+        const axiosClient = axios.create({ baseURL: API_URL, timeout: 30000 });
 
-        const axiosClient = axios.create({ baseURL: API_URL, timeout: 30000, headers: form.getHeaders() });
-
-        console.log("\nAttempting to reach Root (/)....");
+        console.log("\nAttempting to probe Health Check (GET /)....");
         try {
             const res = await axiosClient.get('/');
-            console.log("✅ Root REACHABLE!");
+            console.log("✅ Health Check OK!");
             console.log("Status:", res.status);
-            console.log("Data:", res.data);
+            console.log("Data:", JSON.stringify(res.data));
         } catch (e) {
-            console.log("❌ Root failed: " + e.message);
+            console.log("❌ Health Check failed: " + e.message);
             if (e.response) {
                 console.log("Status:", e.response.status);
-                console.log("Headers:", JSON.stringify(e.response.headers));
                 console.log("Data:", typeof e.response.data === 'string' ? e.response.data.substring(0, 500) : JSON.stringify(e.response.data));
             }
         }
 
-        console.log("\nAttempting /analyze with fixed code path...");
-        try { // Use POST for analyze as per app.py
-            const res = await axiosClient.post('/analyze', form);
-            console.log("✅ /analyze WORKS!");
+        console.log("\nAttempting /analyze-url using Optimized URL...");
+        const optimizedUrl = TEST_IMAGE_URL.replace('&w=687', '&w=800'); // Simulate optimization
+
+        try {
+            const res = await axiosClient.post('/analyze-url', { url: optimizedUrl });
+            console.log("✅ /analyze-url WORKS!");
+            console.log("Status:", res.status);
             const data = res.data;
-            if (Array.isArray(data)) {
-                console.log(`Success! Found ${data.length} faces.`);
-                if (data.length > 0) console.log("First embedding length:", data[0].embedding?.length);
+            if (data.descriptors && Array.isArray(data.descriptors)) {
+                console.log(`Success! Found ${data.descriptors.length} faces.`);
+                console.log("Descriptors found.");
             } else {
-                console.log("Response not an array:", JSON.stringify(data).substring(0, 200));
+                console.log("Unexpected (but successful) response format:", JSON.stringify(data).substring(0, 200));
             }
         } catch (e) {
-            console.log("❌ /analyze failed: " + e.message);
+            console.log("❌ /analyze-url failed: " + e.message);
             if (e.response) {
                 console.log("Status:", e.response.status);
                 console.log("Data:", typeof e.response.data === 'string' ? e.response.data.substring(0, 500) : JSON.stringify(e.response.data));

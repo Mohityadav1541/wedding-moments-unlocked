@@ -57,7 +57,8 @@ def get_model():
         print("⏳ Lazy Loading InsightFace model (buffalo_s)...")
         # 'buffalo_s' is lightweight: ~10MB download, fast CPU inference
         model = FaceAnalysis(name='buffalo_s', providers=['CPUExecutionProvider'])
-        model.prepare(ctx_id=-1, det_size=(640, 640))
+        # LOW MEMORY MODE: Reduced det_size from 640 to 320 to run on 512MB RAM
+        model.prepare(ctx_id=-1, det_size=(320, 320))
         print("✅ Model loaded successfully!")
     return model
 
