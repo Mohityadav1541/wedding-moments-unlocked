@@ -293,7 +293,7 @@ const ManageEvent = () => {
                     <div className="mb-8 animate-in fade-in slide-in-from-top-2">
                         <div className="flex justify-between text-sm mb-2">
                             <span className="font-medium">Uploading Photos...</span>
-                            <span className="text-muted-foreground">{uploadProgress.current} / {uploadProgress.total}</span>
+                            <span className="text-muted-foreground">{uploadProgress.current} uploaded out of {uploadProgress.total}</span>
                         </div>
                         <div className="h-2 w-full bg-secondary/20 rounded-full overflow-hidden">
                             <div
