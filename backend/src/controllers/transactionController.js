@@ -15,10 +15,20 @@ export const createTransaction = async (req, res) => {
             });
         }
 
-        // Validate UPI Transaction ID (mandatory, 12 digits)
-        if (!upiTransactionId || !/^[0-9]{12}$/.test(upiTransactionId)) {
+        // Validate UPI Transaction ID / UPI ID (mandatory)
+        // Accepts: 12-digit transaction ID OR UPI ID format (username@bank)
+        if (!upiTransactionId) {
             return res.status(400).json({
-                message: 'UPI Transaction ID must be exactly 12 digits'
+                message: 'UPI Transaction ID or UPI ID is required'
+            });
+        }
+
+        const isNumericTransactionId = /^[0-9]{12}$/.test(upiTransactionId);
+        const isUpiId = /^[a-zA-Z0-9.\-_]{2,}@[a-zA-Z]{2,}$/.test(upiTransactionId);
+
+        if (!isNumericTransactionId && !isUpiId) {
+            return res.status(400).json({
+                message: 'Invalid format. Enter 12-digit transaction ID or UPI ID (e.g., username@paytm)'
             });
         }
 
