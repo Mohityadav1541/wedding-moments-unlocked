@@ -248,14 +248,14 @@ const ManageEvent = () => {
                                 setUploadProgress({ current: 0, total: totalFiles }); // Show bar immediately
                                 toast.info(`Starting upload of ${totalFiles} photos...`);
 
-                                const BATCH_SIZE = 3;
+                                const BATCH_SIZE = 5;
                                 const fileArray = Array.from(files);
 
                                 for (let i = 0; i < fileArray.length; i += BATCH_SIZE) {
                                     const batch = fileArray.slice(i, i + BATCH_SIZE);
                                     await Promise.all(batch.map(async (file, index) => {
                                         try {
-                                            const compressedFile = await compressImage(file, 0.95, 1080); // 1080px limit, High Quality (relaxed size)
+                                            const compressedFile = await compressImage(file, 0.85, 1080); // 1080px, 85% Quality (Faster)
                                             const formData = new FormData();
                                             formData.append('eventId', event._id);
                                             formData.append('image', compressedFile);
