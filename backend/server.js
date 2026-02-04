@@ -2,14 +2,15 @@ import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import dns from 'dns';
-// Force IPv4 and Google DNS to bypass local network restrictions
-dns.setDefaultResultOrder('ipv4first');
-try {
-    dns.setServers(['8.8.8.8', '8.8.4.4']);
-    console.log("Custom DNS set to Google Public DNS");
-} catch (e) {
-    console.warn("Could not set custom DNS servers:", e.message);
-}
+import Photo from './src/models/Photo.js'; // Emergency Import
+// Force IPv4
+// dns.setDefaultResultOrder('ipv4first');
+// try {
+//     dns.setServers(['8.8.8.8', '8.8.4.4']);
+//     console.log("Custom DNS set to Google Public DNS");
+// } catch (e) {
+//     console.warn("Could not set custom DNS servers:", e.message);
+// }
 
 import dotenv from 'dotenv';
 import cors from 'cors';
@@ -60,6 +61,17 @@ console.log('Registered routes on /api/* and /*');
 
 app.get('/', (req, res) => {
     res.send('API is running...');
+});
+
+// EMERGENCY RESET ROUTE (Inline to avoid router issues)
+app.get('/api/debug-reset', async (req, res) => {
+    try {
+        console.log("Emergency Reset Triggered");
+        const result = await Photo.updateMany({}, { $set: { faceDescriptors: [] } });
+        res.json({ message: `Emergency Success. Cleared ${result.modifiedCount} photos.` });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
 });
 
 // Make uploads folder static
