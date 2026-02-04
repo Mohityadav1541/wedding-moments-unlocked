@@ -353,3 +353,70 @@ export const resetAIData = async (req, res) => {
         res.status(500).json({ message: 'Error resetting data' });
     }
 };
+
+// @desc    Re-scan photos with missing AI data (Recovery Tool)
+// @route   POST /api/photos/rescan
+// @access  Private/Admin
+export const rescanPhotos = async (req, res) => {
+    try {
+        const { eventId } = req.body;
+        console.log(`[Rescan] Request for event: ${eventId}`);
+
+        const query = {
+            event: eventId,
+            $or: [
+                { faceDescriptors: { $size: 0 } },
+                { faceDescriptors: { $exists: false } }
+            ]
+        };
+
+        // Limit to 20 photos per request to avoid Vercel 10s timeout
+        const photosToScan = await Photo.find(query).limit(20);
+        console.log(`[Rescan] Processing batch of ${photosToScan.length} photos...`);
+
+        // Count remaining total for the user info
+        const contentRemaining = await Photo.countDocuments(query);
+
+        if (photosToScan.length === 0) {
+            return res.json({ message: 'All photos are healthy! No re-scan needed.', processed: 0, success: 0, remaining: 0 });
+        }
+
+        let successCount = 0;
+        let processedCount = 0;
+
+        for (const photo of photosToScan) {
+            processedCount++;
+            try {
+                // Use existing URL - make sure it is accessible
+                console.log(`[Rescan] Processing ${processedCount}/${photosToScan.length}: ${photo.url}`);
+                const descriptors = await getAllFaceDescriptors(photo.url);
+
+                if (descriptors && descriptors.length > 0) {
+                    photo.faceDescriptors = descriptors;
+                    await photo.save();
+                    successCount++;
+                    console.log(`[Rescan] Success for ${photo._id}`);
+                } else {
+                    console.warn(`[Rescan] No faces found for ${photo._id} (or AI service still down)`);
+                }
+
+                // Small delay to be nice to the API
+                await new Promise(r => setTimeout(r, 500));
+
+            } catch (err) {
+                console.error(`[Rescan] Failed for ${photo._id}:`, err.message);
+            }
+        }
+
+        res.json({
+            message: `Processed batch of ${processedCount}. Updated ${successCount}. (${contentRemaining - processedCount} remaining - Click Fix again)`,
+            processed: processedCount,
+            success: successCount,
+            remaining: contentRemaining - processedCount
+        });
+
+    } catch (error) {
+        console.error("Rescan Error:", error);
+        res.status(500).json({ message: 'Server Error during rescan' });
+    }
+};
