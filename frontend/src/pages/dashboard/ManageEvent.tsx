@@ -301,6 +301,22 @@ const ManageEvent = () => {
                                 style={{ width: `${(uploadProgress.current / uploadProgress.total) * 100}%` }}
                             />
                         </div>
+                        <div className="flex justify-between items-center mt-3 p-3 bg-primary/5 rounded-lg border border-primary/10">
+                            <div>
+                                <p className="text-xs text-muted-foreground mb-1">Total Photos in Event</p>
+                                <p className="text-lg font-bold text-primary">
+                                    {photos.length + uploadProgress.current} / {event.photoLimit || '∞'}
+                                </p>
+                            </div>
+                            {event.photoLimit && (
+                                <div className="text-right">
+                                    <p className="text-xs text-muted-foreground mb-1">Remaining After Upload</p>
+                                    <p className="text-lg font-semibold text-green-600">
+                                        {Math.max(0, event.photoLimit - (photos.length + uploadProgress.current))} photos
+                                    </p>
+                                </div>
+                            )}
+                        </div>
                         <p className="text-xs text-muted-foreground mt-2 text-center">
                             Please keep this page open until all photos are uploaded.
                         </p>
