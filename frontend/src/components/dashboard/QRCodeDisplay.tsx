@@ -25,12 +25,23 @@ const QRCodeDisplay = ({ eventId, eventName, size = 200 }: QRCodeDisplayProps) =
       const ctx = canvas.getContext("2d");
       const img = new Image();
       img.onload = () => {
-        canvas.width = size * 2;
-        canvas.height = size * 2;
-        ctx?.drawImage(img, 0, 0, size * 2, size * 2);
+        // High resolution for printing (approx 1000px)
+        const scale = 5; // Scale up the original size
+        const renderSize = size * scale;
+
+        canvas.width = renderSize;
+        canvas.height = renderSize;
+
+        if (ctx) {
+          // Fill white background (transparent backgrounds can be tricky for printers)
+          ctx.fillStyle = "#FFFFFF";
+          ctx.fillRect(0, 0, renderSize, renderSize);
+          ctx.drawImage(img, 0, 0, renderSize, renderSize);
+        }
+
         const pngFile = canvas.toDataURL("image/png");
         const downloadLink = document.createElement("a");
-        downloadLink.download = `qr-${eventId}.png`;
+        downloadLink.download = `${eventName.replace(/\s+/g, '-').toLowerCase()}-qr.png`;
         downloadLink.href = pngFile;
         downloadLink.click();
       };
@@ -44,7 +55,7 @@ const QRCodeDisplay = ({ eventId, eventName, size = 200 }: QRCodeDisplayProps) =
       <h3 className="font-display text-lg font-semibold text-foreground mb-4">
         {eventName}
       </h3>
-      
+
       <div className="bg-background p-4 rounded-xl inline-block mb-4">
         <QRCodeSVG
           id={`qr-${eventId}`}

@@ -64,4 +64,29 @@ const reprocessPhotos = async () => {
     }
 };
 
-setTimeout(reprocessPhotos, 3000);
+const run = async () => {
+    await connectDB();
+    // Wait a moment for connection to be fully ready if needed, 
+    // though await connectDB should suffice if implemented correctly.
+    // But connectDB in db.js handles retries recursively without resolving the promise on failure? 
+    // Actually db.js:5 awaits mongoose.connect. If it succeeds, it returns. 
+    // If it fails, it catches and setsTimeout for recursion. The promise resolves/rejects? 
+    // The original connectDB implementation swallows the error and retries, returning undefined immediately on error path?
+    // Let's just wait a safe buffer or check mongoose.connection.readyState
+
+    let attempts = 0;
+    while (mongoose.connection.readyState !== 1 && attempts < 10) {
+        console.log("Waiting for DB connection...");
+        await new Promise(r => setTimeout(r, 1000));
+        attempts++;
+    }
+
+    if (mongoose.connection.readyState !== 1) {
+        console.error("Could not connect to DB.");
+        process.exit(1);
+    }
+
+    await reprocessPhotos();
+};
+
+run();

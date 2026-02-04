@@ -24,37 +24,38 @@ const testAi = async () => {
 
         const axiosClient = axios.create({ baseURL: API_URL, timeout: 30000, headers: form.getHeaders() });
 
-        console.log("\nAttempt 1: /analyze");
+        console.log("\nAttempting to reach Root (/)....");
         try {
+            const res = await axiosClient.get('/');
+            console.log("✅ Root REACHABLE!");
+            console.log("Status:", res.status);
+            console.log("Data:", res.data);
+        } catch (e) {
+            console.log("❌ Root failed: " + e.message);
+            if (e.response) {
+                console.log("Status:", e.response.status);
+                console.log("Headers:", JSON.stringify(e.response.headers));
+                console.log("Data:", typeof e.response.data === 'string' ? e.response.data.substring(0, 500) : JSON.stringify(e.response.data));
+            }
+        }
+
+        console.log("\nAttempting /analyze with fixed code path...");
+        try { // Use POST for analyze as per app.py
             const res = await axiosClient.post('/analyze', form);
             console.log("✅ /analyze WORKS!");
-            console.log("Data:", JSON.stringify(res.data).substring(0, 100));
-            return;
+            const data = res.data;
+            if (Array.isArray(data)) {
+                console.log(`Success! Found ${data.length} faces.`);
+                if (data.length > 0) console.log("First embedding length:", data[0].embedding?.length);
+            } else {
+                console.log("Response not an array:", JSON.stringify(data).substring(0, 200));
+            }
         } catch (e) {
             console.log("❌ /analyze failed: " + e.message);
-            if (e.response) console.log("Status:", e.response.status, e.response.statusText);
-        }
-
-        console.log("\nAttempt 2: /predict");
-        try {
-            const res = await axiosClient.post('/predict', form);
-            console.log("✅ /predict WORKS!");
-            console.log("Data:", JSON.stringify(res.data).substring(0, 100));
-            return;
-        } catch (e) {
-            console.log("❌ /predict failed: " + e.message);
-            if (e.response) console.log("Status:", e.response.status, e.response.statusText);
-        }
-
-        console.log("\nAttempt 3: / (Root)");
-        try {
-            const res = await axiosClient.post('/', form);
-            console.log("✅ / WORKS!");
-            console.log("Data:", JSON.stringify(res.data).substring(0, 100));
-            return;
-        } catch (e) {
-            console.log("❌ / failed: " + e.message);
-            if (e.response) console.log("Status:", e.response.status, e.response.statusText);
+            if (e.response) {
+                console.log("Status:", e.response.status);
+                console.log("Data:", typeof e.response.data === 'string' ? e.response.data.substring(0, 500) : JSON.stringify(e.response.data));
+            }
         }
 
     } catch (error) {

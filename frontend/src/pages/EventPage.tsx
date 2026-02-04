@@ -37,6 +37,7 @@ interface EventData {
 
 const EventPage = () => {
   const { eventId } = useParams();
+  const navigate = useNavigate();
   const [event, setEvent] = useState<EventData | null>(null);
   const [loading, setLoading] = useState(true);
   const [step, setStep] = useState<"welcome" | "selfie" | "results">("welcome");
@@ -45,6 +46,14 @@ const EventPage = () => {
   const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
+    // Manual Redirect for "Rahul weds Madhu" static QR code
+    // Checks for both the new QR code (696...) and keeping the old one (67a...) just in case, 
+    // or replacing it if the user strictly wants "change". 
+    // User said "change this event qr code with this qr code", so I'll prioritize the new one.
+    if (eventId === '696a42244c2a844f930b695e' || eventId === '67a11695e6a42244c2a844f930b6') {
+      navigate('/event/698213d3125b63571ec76f07', { replace: true });
+      return;
+    }
 
     if (eventId) {
       fetchEventDetails();
