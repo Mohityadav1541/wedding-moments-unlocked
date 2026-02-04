@@ -28,16 +28,14 @@ const storage = new CloudinaryStorage({
             // No static watermark
         }
 
-        // Auto-Compression & Optimization for Mobile
-        // Resizes huge DSLR photos to max 2500px width (approx 4K quality, perfect for mobile)
-        // 'limit' ensures small images are NOT scaled up
-        // 'q_auto' automatically adjusts quality to human-eye perception (saves ~60% size)
-        // 'f_auto' serves WebP/AVIF to compatible devices
+        // Mobile-Optimized Compression (97% users on mobile)
+        // Quality 70% = ~250KB per photo = 50 events possible on free plan
+        // 1080px = perfect for mobile Full HD screens
         transformation.push({
             width: 1080,
             crop: "limit",
-            quality: "auto",
-            fetch_format: "auto"
+            quality: "70",         // Optimized for mobile downloads
+            fetch_format: "auto"   // WebP/AVIF when supported
         });
 
         return {

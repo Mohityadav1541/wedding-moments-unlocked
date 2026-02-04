@@ -32,16 +32,8 @@ embeddings_collection = None
 # --- Lifecycle Events ---
 @app.on_event("startup")
 async def startup_event():
-    global model, mongo_client, db, embeddings_collection
+    global mongo_client, db, embeddings_collection
     
-    print("⏳ Loading InsightFace model (buffalo_s)...")
-    # 'buffalo_s' is lightweight: ~10MB download, fast CPU inference
-    # ctx_id=0 usually means GPU 0, but with CPUExecutionProvider it falls back to CPU cleanly or we set to -1
-    # det_size=(640, 640) ensures consistent input size
-    model = FaceAnalysis(name='buffalo_s', providers=['CPUExecutionProvider'])
-    model.prepare(ctx_id=-1, det_size=(640, 640))
-    print("✅ Model loaded successfully!")
-
     print("⏳ Connecting to MongoDB...")
     if not MONGO_URI:
         print("⚠️  WARNING: MONGO_URI not found in env. DB features will fail.")
@@ -58,6 +50,17 @@ def shutdown_event():
         print("MongoDB connection closed.")
 
 # --- Helper Functions ---
+def get_model():
+    """Lazy load the model to avoid OOM on startup."""
+    global model
+    if model is None:
+        print("⏳ Lazy Loading InsightFace model (buffalo_s)...")
+        # 'buffalo_s' is lightweight: ~10MB download, fast CPU inference
+        model = FaceAnalysis(name='buffalo_s', providers=['CPUExecutionProvider'])
+        model.prepare(ctx_id=-1, det_size=(640, 640))
+        print("✅ Model loaded successfully!")
+    return model
+
 def process_image(file_bytes):
     """Convert uploaded file bytes to OpenCV format (BGR)."""
     try:
@@ -102,8 +105,9 @@ async def register_face(
     contents = await image.read()
     img_cv = process_image(contents)
 
-    # Inference
-    faces = model.get(img_cv)
+    # Inference (Lazy Load)
+    face_model = get_model()
+    faces = face_model.get(img_cv)
 
     if len(faces) == 0:
         return JSONResponse(status_code=400, content={"error": "No face detected"})
@@ -150,8 +154,9 @@ async def match_face(
     contents = await image.read()
     img_cv = process_image(contents)
 
-    # Inference
-    faces = model.get(img_cv)
+    # Inference (Lazy Load)
+    face_model = get_model()
+    faces = face_model.get(img_cv)
 
     if len(faces) == 0:
         return JSONResponse(status_code=400, content={"error": "No face detected in input image"})

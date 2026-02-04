@@ -34,7 +34,7 @@ const ManageEvent = () => {
     const [updating, setUpdating] = useState(false);
 
     // AUTO-SCANNER LOGIC
-    const [autoProgress, setAutoProgress] = useState({ processing: false, done: 0, total: 0 });
+    const [autoProgress, setAutoProgress] = useState({ processing: false, remaining: 0 });
 
     useEffect(() => {
         let isActive = true;
@@ -43,17 +43,6 @@ const ManageEvent = () => {
             if (!event || !event._id) return;
 
             try {
-                // Determine if we need to scan
-                // Ideally backend tells us, but we can trigger blindly or check a stat
-                // We'll trust the user wants it done if they are looking at this page.
-
-                // Only show indicator if we actually find work
-                // To avoid flashing, we might set processing=true first, or check first.
-                // Let's check simply by trying one batch.
-
-                // setAutoProgress(prev => ({ ...prev, processing: true })); 
-                // Wait, if we set true immediately, it flashes.
-
                 let remaining = 1;
                 let processedTotal = 0;
                 let started = false;
@@ -61,21 +50,19 @@ const ManageEvent = () => {
                 while (remaining > 0 && isActive) {
                     const res = await api.post('/photos/rescan', { eventId: event._id });
 
-                    const { processed, success, remaining: rem } = res.data;
+                    const { processed, required, remaining: rem } = res.data; // 'required' might be helpful if added to backend, but 'remaining' is key
                     remaining = rem;
                     processedTotal += processed;
 
-                    if (processed > 0) {
-                        if (!started) {
-                            setAutoProgress(prev => ({ ...prev, processing: true }));
-                            started = true;
-                        }
-                        toast.success(`Auto-Scanning: ${processed} photos processed... (${rem} left)`);
+                    if (processed > 0 || remaining > 0) {
+                        setAutoProgress({ processing: true, remaining: rem });
+                        started = true;
                     } else {
                         remaining = 0;
                     }
 
-                    if (remaining > 0) await new Promise(r => setTimeout(r, 1000));
+                    // Only wait if there is more work to do
+                    if (remaining > 0) await new Promise(r => setTimeout(r, 2000));
                 }
 
                 if (processedTotal > 0 && isActive) {
@@ -86,7 +73,7 @@ const ManageEvent = () => {
             } catch (err) {
                 console.error("Auto-Scan Error:", err);
             } finally {
-                if (isActive) setAutoProgress(prev => ({ ...prev, processing: false }));
+                if (isActive) setAutoProgress(prev => ({ ...prev, processing: false, remaining: 0 }));
             }
         };
 
@@ -296,94 +283,19 @@ const ManageEvent = () => {
                         </div>
                     </div>
                     <div className="flex gap-3">
-                        <Button
-                            variant="default"
-                            className="bg-yellow-500 hover:bg-yellow-600 text-white"
-                            onClick={async () => {
-                                try {
-                                    toast.info("Starting AI Re-scan... this may take a minute.");
-                                    const res = await api.post('/photos/rescan', { eventId });
-                                    toast.success(res.data.message);
-                                } catch (err) {
-                                    console.error(err);
-                                    toast.error("Re-scan failed. AI service might still be down.");
-                                }
-                            }}
-
-
-                            // AUTO-SCANNER LOGIC
-                            const [autoProgress, setAutoProgress] = useState({processing: false, done: 0, total: 0 });
-
-    useEffect(() => {
-                            let isActive = true;
-        
-        const runAutoScan = async () => {
-            if (!event || !event._id) return;
-
-                        try {
-                            let remaining = 1;
-                        let processedTotal = 0;
-                        let started = false;
-
-                while (remaining > 0 && isActive) {
-                    const res = await api.post('/photos/rescan', {eventId: event._id });
-
-                        const {processed, success, remaining: rem } = res.data;
-                        remaining = rem;
-                        processedTotal += processed;
-                    
-                    if (processed > 0) {
-                         if (!started) {
-                            setAutoProgress(prev => ({ ...prev, processing: true }));
-                        started = true;
-                         }
-                        toast.success(`Auto-Scanning: ${processed} photos processed... (${rem} left)`);
-                    } else {
-                            remaining = 0; 
-                    }
-
-                    if (remaining > 0) await new Promise(r => setTimeout(r, 1000));
-                }
-                
-                if (processedTotal > 0 && isActive) {
-                            toast.success("✅ Auto-Scan Complete! All photos are ready.");
-                        fetchEventDetails(); 
-                }
-                
-            } catch (err) {
-                            console.error("Auto-Scan Error:", err);
-            } finally {
-                if (isActive) setAutoProgress(prev => ({...prev, processing: false }));
-            }
-        };
-
-        const timer = setTimeout(() => {
-                            runAutoScan();
-        }, 1500);
-
-        return () => {
-                            isActive = false;
-                        clearTimeout(timer);
-        };
-    }, [event?._id]);
-
-    useEffect(() => {
-                            fetchEventDetails();
-                        if (eventId) {
-                            fetchPhotos();
-        }
-    }, [eventId]);
-
-                        // Visual Indicator
-                        // Insert where the button was
-                        return (
-                        <div className="flex flex-col gap-2">
-                            {autoProgress.processing && (
-                                <div className="text-sm font-medium text-yellow-600 animate-pulse">
-                                    ⚡ AI Auto-Enhance Running... Please stay on this page.
+                        <div className="flex flex-col gap-2 min-w-[200px] items-end">
+                            {autoProgress.processing ? (
+                                <div className="flex items-center gap-2 px-3 py-2 bg-yellow-50 text-yellow-700 rounded-lg border border-yellow-200 animate-pulse transition-all">
+                                    <div className="h-2 w-2 bg-yellow-500 rounded-full animate-bounce" />
+                                    <span className="text-sm font-medium">AI Auto-Enhancing... {autoProgress.remaining > 0 && `(${autoProgress.remaining} left)`}</span>
+                                </div>
+                            ) : (
+                                <div className="flex items-center gap-2 px-3 py-2 bg-green-50 text-green-700 rounded-lg border border-green-200 transition-all">
+                                    <span className="text-sm font-medium">✅ AI System Ready</span>
                                 </div>
                             )}
-                            <Button variant="outline" asChild>
+
+                            <Button variant="outline" asChild size="sm">
                                 <Link to={`/event/${eventId}`} target="_blank">
                                     View Public Page
                                 </Link>

@@ -6,11 +6,11 @@ import Photo from './src/models/Photo.js';
 import { getAllFaceDescriptors } from './src/services/externalAiService.js';
 
 dotenv.config();
-connectDB();
 
 const reprocessPhotos = async () => {
     try {
-        console.log('Reprocessing User Photos...'.cyan);
+        await mongoose.connect(process.env.MONGO_URI);
+        console.log('AUTO-PROCESSOR STARTED (Optimized Mode)'.cyan.bold);
 
         // Find photos specifically without descriptors
         const photos = await Photo.find({
@@ -20,42 +20,53 @@ const reprocessPhotos = async () => {
             ]
         });
 
-        console.log(`Found ${photos.length} photos needing AI processing.`.yellow);
+        console.log(`Queue Size: ${photos.length} photos.`.yellow);
 
         if (photos.length === 0) {
-            console.log('No photos to process.');
+            console.log('All photos are already healthy!'.green);
             process.exit();
         }
 
         let successCount = 0;
-        let failCount = 0;
+        let processedCount = 0;
+        const total = photos.length;
 
-        for (const photo of photos) {
-            console.log(`Processing: ${photo._id} - ${photo.url}`);
-            try {
-                // If it's a Cloudinary URL, externalAiService should handle fetching it (we verify this logic inside service)
-                // Actually, our service expects URL handling now, let's verify if getAllFaceDescriptors handles URL?
-                // Step 546 showed it does handle http string by fetching.
+        // BATCH PROCESSING (Gentle Mode: 1 at a time to save Free Tier)
+        const chunk = 1;
+        for (let i = 0; i < total; i += chunk) {
+            const batch = photos.slice(i, i + chunk);
 
-                const descriptors = await getAllFaceDescriptors(photo.url);
-                if (descriptors && descriptors.length > 0) {
-                    photo.faceDescriptors = descriptors;
-                    await photo.save();
-                    console.log(`✅ Success: Found ${descriptors.length} faces.`.green);
-                    successCount++;
-                } else {
-                    console.log(`⚠️ No faces found by AI.`.red);
-                    failCount++;
+            await Promise.all(batch.map(async (photo) => {
+                processedCount++;
+                try {
+                    // OPTIMIZATION: Use smaller image
+                    let aiUrl = photo.url;
+                    if (aiUrl.includes('/upload/')) {
+                        aiUrl = aiUrl.replace('/upload/', '/upload/w_800,q_auto,f_auto/');
+                    }
+
+                    const descriptors = await getAllFaceDescriptors(aiUrl);
+
+                    if (descriptors && descriptors.length > 0) {
+                        photo.faceDescriptors = descriptors;
+                        await photo.save();
+                        successCount++;
+                        process.stdout.write('✅');
+                    } else {
+                        process.stdout.write('⚠️');
+                    }
+                } catch (err) {
+                    process.stdout.write('❌');
                 }
-            } catch (err) {
-                console.error(`❌ Error processing photo: ${err.message}`);
-                failCount++;
-            }
+            }));
+
+            // Large breather to prevent 503 Crashes
+            await new Promise(r => setTimeout(r, 5000));
         }
 
-        console.log(`\nProcessing Complete.`);
-        console.log(`Successful: ${successCount}`.green);
-        console.log(`Failed/No Faces: ${failCount}`.red);
+        console.log(`\n\n🎉 AUTO-PROCESS COMPLETE!`);
+        console.log(`Success: ${successCount} / ${total}`.green);
+        console.log(`You can now view matching results in the app.`);
 
         process.exit();
     } catch (error) {
@@ -64,29 +75,4 @@ const reprocessPhotos = async () => {
     }
 };
 
-const run = async () => {
-    await connectDB();
-    // Wait a moment for connection to be fully ready if needed, 
-    // though await connectDB should suffice if implemented correctly.
-    // But connectDB in db.js handles retries recursively without resolving the promise on failure? 
-    // Actually db.js:5 awaits mongoose.connect. If it succeeds, it returns. 
-    // If it fails, it catches and setsTimeout for recursion. The promise resolves/rejects? 
-    // The original connectDB implementation swallows the error and retries, returning undefined immediately on error path?
-    // Let's just wait a safe buffer or check mongoose.connection.readyState
-
-    let attempts = 0;
-    while (mongoose.connection.readyState !== 1 && attempts < 10) {
-        console.log("Waiting for DB connection...");
-        await new Promise(r => setTimeout(r, 1000));
-        attempts++;
-    }
-
-    if (mongoose.connection.readyState !== 1) {
-        console.error("Could not connect to DB.");
-        process.exit(1);
-    }
-
-    await reprocessPhotos();
-};
-
-run();
+reprocessPhotos();
