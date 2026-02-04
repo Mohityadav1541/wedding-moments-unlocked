@@ -111,17 +111,21 @@ const EventPage = () => {
 
         // Use Client-Side Face Detection & Cropping
         console.log("Detecting face in client...");
-        const croppedBlob = await detectAndCropFace(file);
+        let processedBlob = null;
+        try {
+          processedBlob = await detectAndCropFace(file);
+        } catch (e) {
+          console.warn("Client detection error:", e);
+        }
 
-        if (croppedBlob) {
-          console.log("Face detected and cropped!", croppedBlob.size);
-          formData.append("images", croppedBlob, "face_crop.jpg");
+        if (processedBlob) {
+          console.log("Face detected and cropped!", processedBlob.size);
+          formData.append("images", processedBlob, "face_crop.jpg");
         } else {
-          console.warn("No face detected in this selfie, skipping.");
-          // Optional: You could still upload the original if you want to rely on server backend as fallback, 
-          // but strict requirements say "Upload only the cropped face image"
-          // So we skip or notify user.
-          toast.warning("No face detected in one of the selfies.");
+          console.warn("No face detected in client, sending original as fallback.");
+          // FALLBACK: Send original image
+          formData.append("images", blob, "selfie_original.jpg");
+          toast.info("Using original selfie (client detection skipped).");
         }
       };
 
