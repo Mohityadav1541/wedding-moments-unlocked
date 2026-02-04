@@ -135,9 +135,10 @@ export const searchPhotos = async (req, res) => {
                     const result = await uploadPromise;
                     console.log(`[Search] Temp Upload: ${result.secure_url}`);
 
-                    const descriptor = await getFaceDescriptor(result.secure_url);
-                    if (descriptor) {
-                        userDescriptors.push(descriptor);
+                    const descriptors = await getAllFaceDescriptors(result.secure_url);
+                    if (descriptors && descriptors.length > 0) {
+                        console.log(`[Search] Found ${descriptors.length} face(s) in selfie.`);
+                        userDescriptors.push(...descriptors);
                     }
 
                     // Cleanup (Async, don't await)
