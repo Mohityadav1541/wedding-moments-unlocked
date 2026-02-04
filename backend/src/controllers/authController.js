@@ -49,19 +49,6 @@ export const registerUser = async (req, res) => {
     let { name, email, password, role, studioName, phone, upiId } = req.body;
     email = email.toLowerCase();
 
-    // Only validate phone and UPI for regular users (not superadmin)
-    if (role !== 'superadmin') {
-        // Validate phone number (exactly 10 digits)
-        if (!phone || !/^[0-9]{10}$/.test(phone)) {
-            return res.status(400).json({ message: 'Phone number must be exactly 10 digits' });
-        }
-
-        // Validate UPI ID (mandatory for photographers)
-        if (!upiId || !/^[a-zA-Z0-9.\-_]{2,}@[a-zA-Z]{2,}$/.test(upiId)) {
-            return res.status(400).json({ message: 'Valid UPI ID is required (e.g., username@paytm or 9876543210@ybl)' });
-        }
-    }
-
     const userExists = await User.findOne({ email });
 
     if (userExists) {
@@ -77,7 +64,7 @@ export const registerUser = async (req, res) => {
         studioName
     };
 
-    // Add phone and payment details only if provided (for non-superadmin)
+    // Add phone and payment details if provided (optional)
     if (phone) {
         userData.phone = phone;
     }
