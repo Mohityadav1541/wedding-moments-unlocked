@@ -245,6 +245,7 @@ const ManageEvent = () => {
                                 if (!files || files.length === 0) return;
                                 const totalFiles = files.length;
                                 let uploadedCount = 0;
+                                setUploadProgress({ current: 0, total: totalFiles }); // Show bar immediately
                                 toast.info(`Starting upload of ${totalFiles} photos...`);
 
                                 const BATCH_SIZE = 3;
