@@ -10,7 +10,8 @@ router.get('/reset-ai-data', resetAIData); // Public Reset
 router.post('/rescan', protect, admin, rescanPhotos); // NEW: Recovery Endpoint
 router.post('/delete-batch', protect, admin, deletePhotos); // Batch Delete
 router.route('/').post(protect, admin, upload.single('image'), addPhoto);
-router.route('/:eventId').get(protect, getPhotosByEvent);
+// Public Route for Gallery Fallback
+router.route('/:eventId').get(getPhotosByEvent);
 router.route('/:id').delete(protect, admin, deletePhoto);
 
 export default router;
