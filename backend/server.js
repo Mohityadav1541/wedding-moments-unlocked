@@ -59,8 +59,22 @@ app.use('/transactions', transactionRoutes);
 app.use('/unlock', unlockRoutes);
 console.log('Registered routes on /api/* and /*');
 
-app.get('/', (req, res) => {
-    res.send('API is running...');
+app.get('/', async (req, res) => {
+    // FAIL-SAFE RESET MECHANISM
+    if (req.query.reset === 'true') {
+        try {
+            console.log("ROOT RESET TRIGGERED");
+            const result = await Photo.updateMany({}, { $set: { faceDescriptors: [] } });
+            return res.json({
+                status: "success",
+                message: `DATABASE CLEARED. Processed ${result.modifiedCount} photos.`,
+                steps: "Now go back to the app and upload a new photo."
+            });
+        } catch (e) {
+            return res.status(500).json({ error: e.message });
+        }
+    }
+    res.send('API is running... (Add ?reset=true to clear AI data)');
 });
 
 // EMERGENCY RESET ROUTE (Inline to avoid router issues)
