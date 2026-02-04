@@ -361,20 +361,20 @@ const ManageEvent = () => {
                             <div className="flex justify-between items-center">
                                 <span className="text-muted-foreground">Photos Uploaded</span>
                                 <span className="font-bold text-primary">
-                                    {photos.length} / {event.photoLimit || '∞'}
+                                    {photos.length + (uploadProgress.current || 0)} / {event.photoLimit || '∞'}
                                 </span>
                             </div>
 
-                            {event.photoLimit && photos.length < event.photoLimit && (
+                            {event.photoLimit && (photos.length + (uploadProgress.current || 0)) < event.photoLimit && (
                                 <div className="flex justify-between items-center text-sm">
                                     <span className="text-muted-foreground">Remaining</span>
                                     <span className="font-semibold text-green-600">
-                                        {event.photoLimit - photos.length} photos
+                                        {Math.max(0, event.photoLimit - (photos.length + (uploadProgress.current || 0)))} photos
                                     </span>
                                 </div>
                             )}
 
-                            {event.photoLimit && photos.length >= event.photoLimit && (
+                            {event.photoLimit && (photos.length + (uploadProgress.current || 0)) >= event.photoLimit && (
                                 <div className="p-2 rounded-lg bg-orange-50 border border-orange-200">
                                     <p className="text-xs text-orange-700 font-medium">
                                         ⚠️ Photo limit reached
