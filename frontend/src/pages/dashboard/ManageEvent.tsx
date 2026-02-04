@@ -341,6 +341,31 @@ const ManageEvent = () => {
                                 </span>
                             </div>
 
+                            {/* Photo Upload Counter */}
+                            <div className="flex justify-between items-center">
+                                <span className="text-muted-foreground">Photos Uploaded</span>
+                                <span className="font-bold text-primary">
+                                    {photos.length} / {event.photoLimit || '∞'}
+                                </span>
+                            </div>
+
+                            {event.photoLimit && photos.length < event.photoLimit && (
+                                <div className="flex justify-between items-center text-sm">
+                                    <span className="text-muted-foreground">Remaining</span>
+                                    <span className="font-semibold text-green-600">
+                                        {event.photoLimit - photos.length} photos
+                                    </span>
+                                </div>
+                            )}
+
+                            {event.photoLimit && photos.length >= event.photoLimit && (
+                                <div className="p-2 rounded-lg bg-orange-50 border border-orange-200">
+                                    <p className="text-xs text-orange-700 font-medium">
+                                        ⚠️ Photo limit reached
+                                    </p>
+                                </div>
+                            )}
+
                             <div className="p-3 rounded-lg bg-secondary/10 border border-secondary/20">
                                 <div className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Payment Status</div>
                                 <div className={`font-bold capitalize ${event.paymentStatus === 'confirmed' ? 'text-green-600' :
