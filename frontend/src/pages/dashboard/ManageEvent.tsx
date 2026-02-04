@@ -33,6 +33,73 @@ const ManageEvent = () => {
     const [editOpen, setEditOpen] = useState(false);
     const [updating, setUpdating] = useState(false);
 
+    // AUTO-SCANNER LOGIC
+    const [autoProgress, setAutoProgress] = useState({ processing: false, done: 0, total: 0 });
+
+    useEffect(() => {
+        let isActive = true;
+
+        const runAutoScan = async () => {
+            if (!event || !event._id) return;
+
+            try {
+                // Determine if we need to scan
+                // Ideally backend tells us, but we can trigger blindly or check a stat
+                // We'll trust the user wants it done if they are looking at this page.
+
+                // Only show indicator if we actually find work
+                // To avoid flashing, we might set processing=true first, or check first.
+                // Let's check simply by trying one batch.
+
+                // setAutoProgress(prev => ({ ...prev, processing: true })); 
+                // Wait, if we set true immediately, it flashes.
+
+                let remaining = 1;
+                let processedTotal = 0;
+                let started = false;
+
+                while (remaining > 0 && isActive) {
+                    const res = await api.post('/photos/rescan', { eventId: event._id });
+
+                    const { processed, success, remaining: rem } = res.data;
+                    remaining = rem;
+                    processedTotal += processed;
+
+                    if (processed > 0) {
+                        if (!started) {
+                            setAutoProgress(prev => ({ ...prev, processing: true }));
+                            started = true;
+                        }
+                        toast.success(`Auto-Scanning: ${processed} photos processed... (${rem} left)`);
+                    } else {
+                        remaining = 0;
+                    }
+
+                    if (remaining > 0) await new Promise(r => setTimeout(r, 1000));
+                }
+
+                if (processedTotal > 0 && isActive) {
+                    toast.success("✅ Auto-Scan Complete! All photos are ready.");
+                    fetchEventDetails();
+                }
+
+            } catch (err) {
+                console.error("Auto-Scan Error:", err);
+            } finally {
+                if (isActive) setAutoProgress(prev => ({ ...prev, processing: false }));
+            }
+        };
+
+        const timer = setTimeout(() => {
+            runAutoScan();
+        }, 1500);
+
+        return () => {
+            isActive = false;
+            clearTimeout(timer);
+        };
+    }, [event?._id]);
+
     useEffect(() => {
         fetchEventDetails();
         if (eventId) {
@@ -242,13 +309,9 @@ const ManageEvent = () => {
                                     toast.error("Re-scan failed. AI service might still be down.");
                                 }
                             }}
-                        >
-                            Fix / Re-scan AI
-                        </Button>
-    // AUTO-SCANNER LOGIC
-                        const [autoProgress, setAutoProgress] = useState({processing: false, done: 0, total: 0 });
 
-    useEffect(() => {
+
+                            useEffect(() => {
                             let isActive = true;
         
         const runAutoScan = async () => {
