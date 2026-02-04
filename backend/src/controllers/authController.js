@@ -46,8 +46,18 @@ export const loginUser = async (req, res) => {
 // @route   POST /api/auth/register
 // @access  Public (or Admin depending on requirements)
 export const registerUser = async (req, res) => {
-    let { name, email, password, role, studioName } = req.body;
+    let { name, email, password, role, studioName, phone, upiId } = req.body;
     email = email.toLowerCase();
+
+    // Validate phone number (exactly 10 digits)
+    if (!phone || !/^[0-9]{10}$/.test(phone)) {
+        return res.status(400).json({ message: 'Phone number must be exactly 10 digits' });
+    }
+
+    // Validate UPI ID (mandatory)
+    if (!upiId || !/^[a-zA-Z0-9.\-_]{2,}@[a-zA-Z]{2,}$/.test(upiId)) {
+        return res.status(400).json({ message: 'Valid UPI ID is required (e.g., username@paytm or 9876543210@ybl)' });
+    }
 
     const userExists = await User.findOne({ email });
 
@@ -62,6 +72,12 @@ export const registerUser = async (req, res) => {
         password,
         role: role || 'user', // Default to user if not specified
         studioName,
+        phone,
+        paymentDetails: {
+            upiId,
+            mobileNumber: phone,
+            name: name
+        }
     });
 
     if (user) {

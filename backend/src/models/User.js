@@ -26,7 +26,13 @@ const userSchema = new mongoose.Schema({
     },
     phone: {
         type: String,
-        required: false,
+        required: true,
+        validate: {
+            validator: function (v) {
+                return /^[0-9]{10}$/.test(v);
+            },
+            message: 'Phone number must be exactly 10 digits'
+        }
     },
     whatsapp: {
         type: String,
@@ -63,7 +69,17 @@ const userSchema = new mongoose.Schema({
         default: 0
     },
     paymentDetails: {
-        upiId: { type: String },
+        upiId: {
+            type: String,
+            required: true,
+            validate: {
+                validator: function (v) {
+                    // UPI ID format: username@bankname or phonenumber@bankname
+                    return /^[a-zA-Z0-9.\-_]{2,}@[a-zA-Z]{2,}$/.test(v);
+                },
+                message: 'Invalid UPI ID format (e.g., username@paytm or 9876543210@ybl)'
+            }
+        },
         mobileNumber: { type: String },
         name: { type: String } // Payee Name
     }
