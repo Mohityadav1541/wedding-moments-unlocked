@@ -8,13 +8,6 @@ export const createTransaction = async (req, res) => {
     try {
         const { plan, amount, upiTransactionId, screenshot, mobileNumber } = req.body;
 
-        // Validate mobile number (exactly 10 digits)
-        if (!mobileNumber || !/^[0-9]{10}$/.test(mobileNumber)) {
-            return res.status(400).json({
-                message: 'Mobile number must be exactly 10 digits'
-            });
-        }
-
         // Validate UPI Transaction ID / UPI ID (mandatory)
         // Accepts: 12-digit transaction ID OR UPI ID format (username@bank)
         if (!upiTransactionId) {
