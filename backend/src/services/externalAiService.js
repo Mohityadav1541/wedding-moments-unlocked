@@ -25,7 +25,7 @@ const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 /**
  * Validate a descriptor to ensure it's not garbage (zeros, uniform, or NaN).
  */
-const isValidDescriptor = (descriptor) => {
+export const isValidDescriptor = (descriptor) => {
     if (!Array.isArray(descriptor) || descriptor.length === 0) return false;
 
     // Check for NaN

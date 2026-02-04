@@ -2,7 +2,7 @@ import Photo from '../models/Photo.js';
 import Event from '../models/Event.js';
 import User from '../models/User.js';
 import { cloudinary } from '../config/cloudinary.js';
-import { getFaceDescriptor, getAllFaceDescriptors, isMatch, getCosineSimilarity, MATCH_THRESHOLD } from '../services/externalAiService.js';
+import { getFaceDescriptor, getAllFaceDescriptors, isMatch, getCosineSimilarity, isValidDescriptor, MATCH_THRESHOLD } from '../services/externalAiService.js';
 import { Readable } from 'stream';
 
 // @desc    Get photos for an event
@@ -175,6 +175,9 @@ export const searchPhotos = async (req, res) => {
             // Check all faces in this photo against all user selfies
             if (photo.faceDescriptors) {
                 for (const dbDesc of photo.faceDescriptors) {
+                    // NEW: Validate DB Descriptor before using it (Fix for "All Match" bug)
+                    if (!isValidDescriptor(dbDesc)) continue;
+
                     for (const userDesc of userDescriptors) {
                         const sim = getCosineSimilarity(userDesc, dbDesc);
                         if (sim > maxSimilarity) {
