@@ -172,8 +172,9 @@ export const searchPhotos = async (req, res) => {
             $expr: { $gt: [{ $size: "$faceDescriptors" }, 0] }
         });
 
-        const event = await Event.findById(eventId);
-        const eventFeatures = event ? event.features : { watermarkEnabled: true, watermarkText: 'Wedding Moments' };
+        // Populate User to get the Studio Name
+        const event = await Event.findById(eventId).populate('user');
+        const eventFeatures = event ? event.features : { watermarkEnabled: true, watermarkText: '' };
 
         // 3. Match faces with Cosine Similarity
         // Calculate best match similarity for each photo
@@ -221,11 +222,18 @@ export const searchPhotos = async (req, res) => {
             let transformation = 'w_1080,c_limit,q_auto,f_auto';
 
             // Watermark Logic: Always apply watermark with photographer's business name
-            // Text comes from event.features.watermarkText (set per event)
+            // Text Priority: 1. Event Custom Text (if set) -> 2. User Studio Name -> 3. User Name -> 4. Default
             const shouldWatermark = eventFeatures.watermarkEnabled;
 
             if (shouldWatermark) {
-                const text = encodeURIComponent(eventFeatures.watermarkText || 'Wedding Moments AI');
+                // Determine text
+                let watermarkText = eventFeatures.watermarkText;
+                if (!watermarkText && event.user) {
+                    watermarkText = event.user.studioName || event.user.name;
+                }
+                if (!watermarkText) watermarkText = 'Wedding Moments AI';
+
+                const text = encodeURIComponent(watermarkText);
                 transformation += `/l_text:Arial_60_bold:${text},g_south,y_50,co_white,o_90,b_rgb:00000050,fl_layer_apply`;
             }
 

@@ -61,14 +61,18 @@ const PhotoGallery = ({ photos, photographerName, watermarkEnabled }: PhotoGalle
           // If watermark enabled, burn it. Else just blob it.
           // Note: "watermarkEnabled" prop comes from Event features. 
           // If user turned it on, we use it.
-          let blob: Blob;
+          // Optimization:
+          // The 'targetUrl' (downloadUrl) usually comes from Backend with watermark ALREADY APPLIED (via Cloudinary).
+          // We DO NOT want to add a second watermark here (which was causing the double-watermark bug).
+          // So we simply download the blob.
 
-          if (watermarkEnabled) {
-            blob = await addWatermark(targetUrl, photographerName || "Wedding Moments");
-          } else {
-            const response = await fetch(targetUrl);
-            blob = await response.blob();
-          }
+          let blob: Blob;
+          const response = await fetch(targetUrl);
+          blob = await response.blob();
+
+          // Legacy Code Removed:
+          // if (watermarkEnabled) { blob = await addWatermark(...) } 
+          // This was double-watermarking. Server does it better.
 
           const url = window.URL.createObjectURL(blob);
           const a = document.createElement('a');
