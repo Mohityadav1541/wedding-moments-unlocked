@@ -39,7 +39,7 @@ Once deployed, your URL will be something like `https://python-face-service.onre
 - **Register Face**: `POST /register` (form-data: `image`, `label`)
 - **Match Face**: `POST /match` (form-data: `image`)
 
-## Note on Free Tier RAM (512MB)
-- The application uses `buffalo_s` model which is very small.
-- We load embeddings into memory for matching. 15,000 vectors is small (~30MB), so it fits easily.
-- If the service crashes, check the "Logs" tab in Render for "Out of Memory" errors.
+## Note on RAM (Requires 2GB+)
+- The application uses `buffalo_l` model which is the **High Accuracy** model.
+- It requires at least **2GB RAM** (Render Standard Plan) to run reliably.
+- Do NOT deploy this on the Free Tier (512MB), it will crash.

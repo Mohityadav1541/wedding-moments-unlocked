@@ -54,11 +54,12 @@ def get_model():
     """Lazy load the model to avoid OOM on startup."""
     global model
     if model is None:
-        print("⏳ Lazy Loading InsightFace model (buffalo_s)...")
-        # 'buffalo_s' is lightweight: ~10MB download, fast CPU inference
-        model = FaceAnalysis(name='buffalo_s', providers=['CPUExecutionProvider'])
-        # LOW MEMORY MODE: Reduced det_size from 640 to 320 to run on 512MB RAM
-        model.prepare(ctx_id=-1, det_size=(320, 320))
+        print("⏳ Lazy Loading InsightFace model (buffalo_l)...")
+        # 'buffalo_l' is the High-Accuracy model. Requires ~1GB RAM.
+        model = FaceAnalysis(name='buffalo_l', providers=['CPUExecutionProvider'])
+        # HIGH ACCURACY MODE: Increased det_size to 640 for better small-face detection.
+        # This is safe now that we have 2GB+ RAM.
+        model.prepare(ctx_id=-1, det_size=(640, 640))
         print("✅ Model loaded successfully!")
     return model
 
