@@ -189,17 +189,17 @@ const PhotoGallery = ({ photos, photographerName, watermarkEnabled }: PhotoGalle
         <DialogContent className="max-w-3xl p-0 overflow-hidden bg-black/90 border-none">
           {previewPhoto && (
             <>
-              <div className="relative aspect-[4/3] flex items-center justify-center">
+              <div className="relative w-full flex items-center justify-center bg-black/50 min-h-[50vh]">
                 <img
-                  src={previewPhoto.url} // You might want high-res here if available, but url is usually fine for preview
+                  src={previewPhoto.url}
                   alt="Preview"
-                  className="max-h-[80vh] w-full object-contain"
+                  className="max-h-[85vh] w-auto max-w-full object-contain"
                 />
 
                 {/* Close Button overlay */}
                 <button
                   onClick={() => setPreviewPhoto(null)}
-                  className="absolute top-4 right-4 bg-black/50 hover:bg-black/70 text-white rounded-full p-2"
+                  className="absolute top-4 right-4 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 backdrop-blur-sm z-50"
                 >
                   <XIcon className="h-6 w-6" />
                 </button>
