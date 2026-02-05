@@ -226,17 +226,27 @@ export const searchPhotos = async (req, res) => {
             const shouldWatermark = eventFeatures.watermarkEnabled;
 
             if (shouldWatermark) {
-                // Determine text
+                // Determine text priority:
+                // 1. Custom Event Text (ONLY if it's not the default generic text)
+                // 2. Studio Name (Sanwaliya Photo Studio)
+                // 3. User Name
+                // 4. Default
+
                 let watermarkText = eventFeatures.watermarkText;
-                if (!watermarkText && event.user) {
-                    watermarkText = event.user.studioName || event.user.name;
+                const isGeneric = !watermarkText || watermarkText === 'Wedding Moments' || watermarkText === 'Wedding Moments AI';
+
+                if (isGeneric && event.user && event.user.studioName) {
+                    watermarkText = event.user.studioName;
+                } else if (isGeneric && event.user && event.user.name) {
+                    watermarkText = event.user.name;
                 }
-                if (!watermarkText) watermarkText = 'Wedding Moments AI';
+
+                if (!watermarkText || watermarkText === 'Wedding Moments') watermarkText = 'Wedding Moments AI';
 
                 const text = encodeURIComponent(watermarkText);
-                // SAFE SYNTAX: White Text with Black Border (Stroke) - Professional and Error-Free
-                // Removed 'b_rgb:00000050' which might be invalid hex on some CDNs
-                transformation += `/l_text:Arial_60_bold:${text},g_south,y_50,co_white,bo_4px_solid_black,fl_layer_apply`;
+                // SAFE SYNTAX: White Text with Black Border (Stroke)
+                // Position: 'g_south_east' (Bottom Right), with padding (x_30, y_30)
+                transformation += `/l_text:Arial_60_bold:${text},g_south_east,x_30,y_30,co_white,bo_4px_solid_black,fl_layer_apply`;
             }
 
             let downloadUrl = photo.url;

@@ -301,7 +301,12 @@ const EventPage = () => {
             <PhotoGallery
               photos={matchedPhotos}
               photoPrice={event.pricePerPhoto || 0}
-              photographerName={event.features?.watermarkText || event.user?.studioName || event.user?.name || "Wedding Moment AI"}
+              photoPrice={event.pricePerPhoto || 0}
+              photographerName={
+                (event.features?.watermarkText && event.features.watermarkText !== 'Wedding Moments' && event.features.watermarkText !== 'Wedding Moments AI')
+                  ? event.features.watermarkText
+                  : (event.user?.studioName || event.user?.name || "Wedding Moments AI")
+              }
               paymentDetails={event.user?.paymentDetails}
               watermarkEnabled={event.features?.watermarkEnabled ?? true}
               eventId={event._id}

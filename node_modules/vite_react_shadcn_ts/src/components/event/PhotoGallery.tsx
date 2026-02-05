@@ -157,10 +157,10 @@ const PhotoGallery = ({ photos, photographerName, watermarkEnabled }: PhotoGalle
                   </span>
                 </div>
 
-                {/* Bottom Watermark - Visual Only */}
+                {/* Bottom Watermark - Visual Only (Matches Backend Position) */}
                 {watermarkEnabled && (
-                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-3 pt-6 flex justify-end">
-                    <span className="text-xs text-white/90 font-medium bg-black/40 px-2 py-0.5 rounded">
+                  <div className="absolute bottom-2 right-2 flex justify-end">
+                    <span className="text-[10px] text-white font-bold drop-shadow-md bg-black/30 px-2 py-1 rounded backdrop-blur-[2px]">
                       {photographerName}
                     </span>
                   </div>
