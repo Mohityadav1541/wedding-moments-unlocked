@@ -9,7 +9,7 @@ from pymongo import MongoClient
 import insightface
 from insightface.app import FaceAnalysis
 from dotenv import load_dotenv
-from PIL import Image
+from PIL import Image, ImageOps
 
 # Load environment variables
 load_dotenv()
@@ -63,10 +63,17 @@ def get_model():
         print("✅ Model loaded successfully!")
     return model
 
+from PIL import Image, ImageOps
+
 def process_image(file_bytes):
-    """Convert uploaded file bytes to OpenCV format (BGR)."""
+    """Convert uploaded file bytes to OpenCV format (BGR), handling EXIF rotation."""
     try:
-        image = Image.open(io.BytesIO(file_bytes)).convert('RGB')
+        image = Image.open(io.BytesIO(file_bytes))
+        
+        # FIX: Handle EXIF orientation (Mobile photos are often rotated)
+        image = ImageOps.exif_transpose(image)
+        
+        image = image.convert('RGB')
         image = np.array(image)
         # Convert RGB to BGR (OpenCV standard)
         image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
