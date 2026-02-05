@@ -118,11 +118,16 @@ export const searchPhotos = async (req, res) => {
         for (const file of files) {
             // Note: file.buffer is available because we use memoryStorage now
             if (file.buffer) {
+                let result;
                 try {
                     // Upload to Cloudinary to get a URL for the AI Service
-                    const uploadPromise = new Promise((resolve, reject) => {
+                    result = await new Promise((resolve, reject) => {
                         const uploadStream = cloudinary.uploader.upload_stream(
-                            { folder: 'temp_search' },
+                            {
+                                folder: 'temp_search',
+                                // Transformation to save space/bandwidth - resize BEFORE storing in Cloudinary
+                                transformation: [{ width: 1000, crop: "limit", quality: "auto" }]
+                            },
                             (error, result) => {
                                 if (error) reject(error);
                                 else resolve(result);
@@ -132,7 +137,6 @@ export const searchPhotos = async (req, res) => {
                         stream.pipe(uploadStream);
                     });
 
-                    const result = await uploadPromise;
                     console.log(`[Search] Temp Upload: ${result.secure_url}`);
 
                     const descriptors = await getAllFaceDescriptors(result.secure_url);
@@ -141,11 +145,14 @@ export const searchPhotos = async (req, res) => {
                         userDescriptors.push(...descriptors);
                     }
 
-                    // Cleanup (Async, don't await)
-                    cloudinary.uploader.destroy(result.public_id).catch(err => console.error("Cleanup failed", err));
-
                 } catch (err) {
-                    console.error("[Search] Temp Upload Failed:", err);
+                    console.error("[Search] Processing Failed for file:", err);
+                } finally {
+                    // ALWAYS cleanup temp file
+                    if (result && result.public_id) {
+                        await cloudinary.uploader.destroy(result.public_id).catch(e => console.error("Cleanup warning:", e));
+                        console.log(`[Search] Cleaned up temp file: ${result.public_id}`);
+                    }
                 }
             }
         }
