@@ -69,7 +69,8 @@ export const getFaceDescriptor = async (imageInput, retries = 15) => {
                     // Check if already transformed to avoid double-transform or breaking signed URLs
                     if (!imageInput.includes('/w_')) {
                         const parts = imageInput.split('/upload/');
-                        optimizedUrl = `${parts[0]}/upload/w_1600,c_limit,q_auto/${parts[1]}`;
+                        const width = imageInput.includes('/temp_search/') ? 'w_800' : 'w_1600';
+                        optimizedUrl = `${parts[0]}/upload/${width},c_limit,q_auto/${parts[1]}`;
                     }
                 }
 
@@ -114,8 +115,13 @@ export const getAllFaceDescriptors = async (imageInput, retries = 15) => {
                     // Check if already transformed to avoid double-transform or breaking signed URLs
                     if (!imageInput.includes('/w_')) {
                         const parts = imageInput.split('/upload/');
-                        // UPGRADE: 2GB RAM allows larger images (1600px) which helps 'buffalo_l' find small faces
-                        optimizedUrl = `${parts[0]}/upload/w_1600,c_limit,q_auto/${parts[1]}`;
+
+                        // SMART ADJUSTMENT:
+                        // - Selfies (temp_search) -> w_800 (Close ups, usually single face, save RAM)
+                        // - Event Photos -> w_1600 (Group shots, need high res for small faces)
+                        const width = imageInput.includes('/temp_search/') ? 'w_800' : 'w_1600';
+
+                        optimizedUrl = `${parts[0]}/upload/${width},c_limit,q_auto/${parts[1]}`;
                     }
                 }
 
