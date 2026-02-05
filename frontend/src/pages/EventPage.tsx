@@ -99,7 +99,7 @@ const EventPage = () => {
     toast.info("Analyzing your selfies...");
 
     try {
-      const { detectAndCropFace } = await import("@/services/FaceDetectionService");
+      // const { detectAndCropFace } = await import("@/services/FaceDetectionService"); // Removed for Mobile Fix
       const formData = new FormData();
       formData.append("eventId", event._id);
 
@@ -109,24 +109,13 @@ const EventPage = () => {
         const blob = await res.blob();
         const file = new File([blob], "selfie.jpg", { type: "image/jpeg" });
 
-        // Use Client-Side Face Detection & Cropping
-        console.log("Detecting face in client...");
-        let processedBlob = null;
-        try {
-          processedBlob = await detectAndCropFace(file);
-        } catch (e) {
-          console.warn("Client detection error:", e);
-        }
+        // DIRECT UPLOAD: 
+        // We bypass client-side processing (Canvas) because it often strips EXIF rotation data on mobile.
+        // Sending the raw file allows the Backend (Python) to read the EXIF and rotate the image correctly.
+        console.log("Adding selfie to payload (Raw)...");
+        formData.append("images", blob, "selfie_original.jpg");
 
-        if (processedBlob) {
-          console.log("Face detected and cropped!", processedBlob.size);
-          formData.append("images", processedBlob, "face_crop.jpg");
-        } else {
-          console.warn("No face detected in client, sending original as fallback.");
-          // FALLBACK: Send original image
-          formData.append("images", blob, "selfie_original.jpg");
-          // toast.info("Using original selfie (client detection skipped)."); // Removed to avoid user confusion
-        }
+        // Skip detectAndCropFace to avoid "Sideways Selfie" bug.
       };
 
       // Process Front (Required)
