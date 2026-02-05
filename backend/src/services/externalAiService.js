@@ -69,7 +69,7 @@ export const getFaceDescriptor = async (imageInput, retries = 15) => {
                     // Check if already transformed to avoid double-transform or breaking signed URLs
                     if (!imageInput.includes('/w_')) {
                         const parts = imageInput.split('/upload/');
-                        optimizedUrl = `${parts[0]}/upload/w_800,c_limit,q_auto/${parts[1]}`;
+                        optimizedUrl = `${parts[0]}/upload/w_1600,c_limit,q_auto/${parts[1]}`;
                     }
                 }
 
@@ -111,9 +111,11 @@ export const getAllFaceDescriptors = async (imageInput, retries = 15) => {
                 // OPTIMIZATION: Resize to 800px to prevent OOM on Python Service (512MB RAM Limit)
                 let optimizedUrl = imageInput;
                 if (imageInput.includes('cloudinary.com') && imageInput.includes('/upload/')) {
+                    // Check if already transformed to avoid double-transform or breaking signed URLs
                     if (!imageInput.includes('/w_')) {
                         const parts = imageInput.split('/upload/');
-                        optimizedUrl = `${parts[0]}/upload/w_800,c_limit,q_auto/${parts[1]}`;
+                        // UPGRADE: 2GB RAM allows larger images (1600px) which helps 'buffalo_l' find small faces
+                        optimizedUrl = `${parts[0]}/upload/w_1600,c_limit,q_auto/${parts[1]}`;
                     }
                 }
 

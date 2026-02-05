@@ -35,6 +35,45 @@ const ManageEvent = () => {
 
     // AUTO-SCANNER LOGIC
     const [autoProgress, setAutoProgress] = useState({ processing: false, remaining: 0 });
+    const [deepScanning, setDeepScanning] = useState(false);
+
+    const handleDeepScan = async () => {
+        if (!event || !event._id) return;
+        if (!confirm("Start Deep Scan? This will re-process ALL photos with the new High-Accuracy AI model. Use this after upgrading your plan.")) return;
+
+        setDeepScanning(true);
+        let isActive = true;
+
+        try {
+            let remaining = 1;
+
+            while (remaining > 0 && isActive) {
+                // FORCE = true to re-scan everything
+                const res = await api.post('/photos/rescan', { eventId: event._id, force: true });
+                // With force=true, 'remaining' logic from backend is a bit weird (it counts all matching query).
+                // But since we sort by updatedAt, eventually we process everything.
+                // We should rely on 'processed' count. If processed == 0, we are done.
+
+                const { processed, remaining: rem } = res.data;
+
+                if (processed === 0) {
+                    remaining = 0;
+                } else {
+                    // Update progress (Just show we are busy)
+                    setAutoProgress({ processing: true, remaining: rem });
+                    await new Promise(r => setTimeout(r, 1000));
+                }
+            }
+            toast.success("✅ Deep Scan Complete!");
+        } catch (error) {
+            console.error(error);
+            toast.error("Deep Scan stopped due to error.");
+        } finally {
+            setDeepScanning(false);
+            setAutoProgress(prev => ({ ...prev, processing: false }));
+            fetchEventDetails();
+        }
+    };
 
     useEffect(() => {
         let isActive = true;
@@ -290,8 +329,19 @@ const ManageEvent = () => {
                                     <span className="text-sm font-medium">AI Auto-Enhancing... {autoProgress.remaining > 0 && `(${autoProgress.remaining} left)`}</span>
                                 </div>
                             ) : (
-                                <div className="flex items-center gap-2 px-3 py-2 bg-green-50 text-green-700 rounded-lg border border-green-200 transition-all">
-                                    <span className="text-sm font-medium">✅ AI System Ready</span>
+                                <div className="flex flex-col items-end gap-2">
+                                    <div className="flex items-center gap-2 px-3 py-2 bg-green-50 text-green-700 rounded-lg border border-green-200 transition-all">
+                                        <span className="text-sm font-medium">✅ AI System Ready</span>
+                                    </div>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={handleDeepScan}
+                                        disabled={deepScanning}
+                                        className="text-xs text-primary h-6 px-2 hover:bg-primary/10"
+                                    >
+                                        {deepScanning ? "Deep Scanning..." : "Force Deep-Scan (Upgrade)"}
+                                    </Button>
                                 </div>
                             )}
 

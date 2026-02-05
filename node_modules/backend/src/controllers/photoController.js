@@ -359,22 +359,26 @@ export const resetAIData = async (req, res) => {
 // @access  Private/Admin
 export const rescanPhotos = async (req, res) => {
     try {
-        const { eventId } = req.body;
-        console.log(`[Rescan] Request for event: ${eventId}`);
+        const { eventId, force } = req.body;
+        console.log(`[Rescan] Request for event: ${eventId} (Force: ${force})`);
 
-        const query = {
-            event: eventId,
-            $or: [
+        const query = { event: eventId };
+
+        // If NOT forced, only scan missing ones. 
+        // If FORCE is true, we scan EVERYTHING (dangerous/expensive but needed for upgrades)
+        if (!force) {
+            query.$or = [
                 { faceDescriptors: { $size: 0 } },
                 { faceDescriptors: { $exists: false } }
-            ]
-        };
+            ];
+        }
 
         // Limit to 20 photos per request to avoid Vercel 10s timeout
-        const photosToScan = await Photo.find(query).limit(20);
+        // SORT by updatedAt (Oldest first) to avoid infinite loops when using force=true
+        const photosToScan = await Photo.find(query).sort({ updatedAt: 1 }).limit(20);
         console.log(`[Rescan] Processing batch of ${photosToScan.length} photos...`);
 
-        // Count remaining total for the user info
+        // Count remaining total for the user info (This is tricky with force=true, but acceptable approximation)
         const contentRemaining = await Photo.countDocuments(query);
 
         if (photosToScan.length === 0) {
