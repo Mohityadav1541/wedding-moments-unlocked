@@ -80,6 +80,7 @@ const ManageEvent = () => {
 
         const runAutoScan = async () => {
             if (!event || !event._id) return;
+            if (deepScanning) return; // Prevent race conditions with Deep Scan
 
             try {
                 let remaining = 1;
