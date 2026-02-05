@@ -234,7 +234,9 @@ export const searchPhotos = async (req, res) => {
                 if (!watermarkText) watermarkText = 'Wedding Moments AI';
 
                 const text = encodeURIComponent(watermarkText);
-                transformation += `/l_text:Arial_60_bold:${text},g_south,y_50,co_white,o_90,b_rgb:00000050,fl_layer_apply`;
+                // SAFE SYNTAX: White Text with Black Border (Stroke) - Professional and Error-Free
+                // Removed 'b_rgb:00000050' which might be invalid hex on some CDNs
+                transformation += `/l_text:Arial_60_bold:${text},g_south,y_50,co_white,bo_4px_solid_black,fl_layer_apply`;
             }
 
             let downloadUrl = photo.url;
