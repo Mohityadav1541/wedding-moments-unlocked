@@ -400,9 +400,9 @@ export const rescanPhotos = async (req, res) => {
             ];
         }
 
-        // Limit to 20 photos per request to avoid Vercel 10s timeout
+        // Limit to 5 photos per request to avoid Vercel 10s timeout (since retries take time now)
         // SORT by updatedAt (Oldest first) to avoid infinite loops when using force=true
-        const photosToScan = await Photo.find(query).sort({ updatedAt: 1 }).limit(20);
+        const photosToScan = await Photo.find(query).sort({ updatedAt: 1 }).limit(5);
         console.log(`[Rescan] Processing batch of ${photosToScan.length} photos...`);
 
         // Count remaining total for the user info (This is tricky with force=true, but acceptable approximation)

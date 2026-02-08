@@ -102,32 +102,26 @@ export const getFaceDescriptor = async (imageInput, retries = 15) => {
     return null;
 };
 
-export const getAllFaceDescriptors = async (imageInput, retries = 15) => {
+export const getAllFaceDescriptors = async (imageInput, retries = 3) => {
     for (let i = 0; i < retries; i++) {
         try {
             const client = getClient();
             if (!client) return [];
 
             if (typeof imageInput === 'string' && imageInput.startsWith('http')) {
-                // OPTIMIZATION: Resize to 800px to prevent OOM on Python Service (512MB RAM Limit)
+                // OPTIMIZATION: 
+                // Server has 2GB RAM now. We can handle larger images.
+                // 1280px is a great balance between quality and speed.
+
                 let optimizedUrl = imageInput;
                 if (imageInput.includes('cloudinary.com') && imageInput.includes('/upload/')) {
-                    // Check if already transformed to avoid double-transform or breaking signed URLs
                     if (!imageInput.includes('/w_')) {
                         const parts = imageInput.split('/upload/');
 
                         // SMART ADJUSTMENT:
-                        // - Selfies (temp_search) -> w_800 (Close ups, usually single face, save RAM)
-                        // - Event Photos -> w_1024 (Reduced from 1600 to prevent OOM on Render Free Tier)
-                        // - Retry Fallback -> w_800 (If 1024 fails)
-                        let width = imageInput.includes('/temp_search/') ? 'w_800' : 'w_1024';
-
-                        // FALLBACK LOGIC: If we are retrying (i > 0) and validation failed or error occurred, 
-                        // try to downgrade resolution to ensure it processes.
-                        if (i > 0) {
-                            console.log(`[AI Service] Retry ${i}: Downgrading resolution to w_800`);
-                            width = 'w_800';
-                        }
+                        // - Selfies: w_800 (Fast)
+                        // - Event Photos: w_1280 (High Quality for 2GB Server)
+                        let width = imageInput.includes('/temp_search/') ? 'w_800' : 'w_1280';
 
                         optimizedUrl = `${parts[0]}/upload/${width},c_limit,q_auto/${parts[1]}`;
                     }
@@ -144,16 +138,18 @@ export const getAllFaceDescriptors = async (imageInput, retries = 15) => {
                     vectors = data.map(face => face.embedding);
                 }
 
-                // Filter invalid vectors
                 return vectors.filter(v => isValidDescriptor(v));
             } else {
                 console.warn("[AI Service] Buffer/File not supported on /analyze-url. Skipping.");
                 return [];
             }
         } catch (error) {
-            // Exponential Backoff: 2s, 4s, 8s, 16s...
-            const waitTime = 2000 * Math.pow(2, i);
-            console.warn(`[AI Service] Attempt ${i + 1} failed (503/Error). Retrying in ${waitTime / 1000}s...`);
+            // Fast Retry Logic for Paid Server
+            // If it fails, it's likely a network blip, not OOM. Retry quickly.
+            // Don't wait too long or Vercel will timeout (10s limit).
+
+            const waitTime = 1000 * (i + 1); // 1s, 2s, 3s
+            console.warn(`[AI Service] Attempt ${i + 1} failed. Retrying in ${waitTime / 1000}s...`);
 
             if (i === retries - 1) return [];
             await delay(waitTime);
