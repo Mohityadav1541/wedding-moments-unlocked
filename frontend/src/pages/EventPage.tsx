@@ -301,7 +301,6 @@ const EventPage = () => {
             <PhotoGallery
               photos={matchedPhotos}
               photoPrice={event.pricePerPhoto || 0}
-              photoPrice={event.pricePerPhoto || 0}
               photographerName={
                 (event.features?.watermarkText && event.features.watermarkText !== 'Wedding Moments' && event.features.watermarkText !== 'Wedding Moments AI')
                   ? event.features.watermarkText
