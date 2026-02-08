@@ -21,6 +21,7 @@ interface UnlockRequest {
     transactionId: string;
     status: 'pending' | 'approved' | 'rejected';
     createdAt: string;
+    photographer: string; // ID of the photographer
 }
 
 const PaymentRequests = () => {

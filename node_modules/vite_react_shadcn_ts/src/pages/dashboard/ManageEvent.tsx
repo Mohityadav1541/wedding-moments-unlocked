@@ -197,14 +197,31 @@ const ManageEvent = () => {
     const handleBulkDelete = async () => {
         if (!selectedPhotos.length) return;
         if (confirm(`Delete ${selectedPhotos.length} photos? This cannot be undone.`)) {
+            const BATCH_SIZE = 50; // Delete in chunks to avoid timeouts
+            const totalBatches = Math.ceil(selectedPhotos.length / BATCH_SIZE);
+
             try {
-                await api.post('/photos/delete-batch', { photoIds: selectedPhotos });
-                toast.success(`${selectedPhotos.length} photos deleted`);
+                let deletedCount = 0;
+                const toastId = toast.loading(`Deleting ${selectedPhotos.length} photos...`);
+
+                for (let i = 0; i < selectedPhotos.length; i += BATCH_SIZE) {
+                    const batch = selectedPhotos.slice(i, i + BATCH_SIZE);
+                    const currentBatchNum = Math.floor(i / BATCH_SIZE) + 1;
+
+                    toast.loading(`Deleting batch ${currentBatchNum}/${totalBatches}...`, { id: toastId });
+
+                    await api.post('/photos/delete-batch', { photoIds: batch });
+                    deletedCount += batch.length;
+                }
+
+                toast.success(`${deletedCount} photos deleted successfully`, { id: toastId });
                 setSelectedPhotos([]);
                 fetchPhotos();
+                fetchEventDetails(); // Update counts
             } catch (error) {
                 console.error("Bulk delete failed:", error);
-                toast.error("Failed to delete photos");
+                toast.error("Failed to delete some photos. Please try again.");
+                fetchPhotos(); // Refresh to see what's left
             }
         }
     };

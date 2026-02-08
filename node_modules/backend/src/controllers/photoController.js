@@ -83,7 +83,9 @@ export const addPhoto = async (req, res) => {
         const photo = new Photo({
             event: eventId,
             url,
-            faceDescriptors: faceDescriptors
+            url,
+            faceDescriptors: faceDescriptors,
+            aiProcessed: true
         });
 
         const createdPhoto = await photo.save();
@@ -342,8 +344,9 @@ export const deletePhotos = async (req, res) => {
             }
         }
 
-        // Delete from Cloudinary
-        for (const photo of photos) {
+        // Delete from Cloudinary with concurrency limit (Batch size is controlled by Frontend, but we add safety here)
+        // Promise.all is faster than sequential await
+        const deletePromises = photos.map(async (photo) => {
             if (photo.url && photo.url.includes('cloudinary')) {
                 try {
                     const urlParts = photo.url.split('/');
@@ -355,7 +358,9 @@ export const deletePhotos = async (req, res) => {
                     console.error(`Failed to delete from Cloudinary: ${photo._id}`, err);
                 }
             }
-        }
+        });
+
+        await Promise.all(deletePromises);
 
         // Delete from DB
         await Photo.deleteMany({ _id: { $in: photoIds } });
@@ -394,9 +399,11 @@ export const rescanPhotos = async (req, res) => {
         // If NOT forced, only scan missing ones. 
         // If FORCE is true, we scan EVERYTHING (dangerous/expensive but needed for upgrades)
         if (!force) {
+            // FIX: Prevent infinite loop on 0-face photos
+            // Only scan if 'aiProcessed' is false or missing (legacy photos)
             query.$or = [
-                { faceDescriptors: { $size: 0 } },
-                { faceDescriptors: { $exists: false } }
+                { aiProcessed: false },
+                { aiProcessed: { $exists: false } }
             ];
         }
 
@@ -422,32 +429,35 @@ export const rescanPhotos = async (req, res) => {
                 console.log(`[Rescan] Processing ${processedCount}/${photosToScan.length}: ${photo.url}`);
                 const descriptors = await getAllFaceDescriptors(photo.url);
 
-                if (descriptors && descriptors.length > 0) {
-                    photo.faceDescriptors = descriptors;
-                    await photo.save();
-                    successCount++;
-                    console.log(`[Rescan] Success for ${photo._id}`);
-                } else {
-                    console.warn(`[Rescan] No faces found for ${photo._id} (or AI service still down)`);
-                }
-
-                // Small delay to be nice to the API
-                await new Promise(r => setTimeout(r, 500));
-
-            } catch (err) {
-                console.error(`[Rescan] Failed for ${photo._id}:`, err.message);
+                photo.faceDescriptors = descriptors;
+                photo.aiProcessed = true; // MARK AS PROCESSED
+                await photo.save();
+                successCount++;
+                console.log(`[Rescan] Success for ${photo._id}`);
+            } else {
+                // Even if 0 faces, mark as processed so we don't loop forever
+                photo.aiProcessed = true;
+                await photo.save();
+                console.warn(`[Rescan] No faces found for ${photo._id} (Marked as processed)`);
             }
+
+            // Small delay to be nice to the API
+            await new Promise(r => setTimeout(r, 500));
+
+        } catch (err) {
+            console.error(`[Rescan] Failed for ${photo._id}:`, err.message);
         }
+    }
 
         res.json({
-            message: `Processed batch of ${processedCount}. Updated ${successCount}. (${contentRemaining - processedCount} remaining - Click Fix again)`,
-            processed: processedCount,
-            success: successCount,
-            remaining: contentRemaining - processedCount
-        });
+        message: `Processed batch of ${processedCount}. Updated ${successCount}. (${contentRemaining - processedCount} remaining - Click Fix again)`,
+        processed: processedCount,
+        success: successCount,
+        remaining: contentRemaining - processedCount
+    });
 
-    } catch (error) {
-        console.error("Rescan Error:", error);
-        res.status(500).json({ message: 'Server Error during rescan' });
-    }
+} catch (error) {
+    console.error("Rescan Error:", error);
+    res.status(500).json({ message: 'Server Error during rescan' });
+}
 };

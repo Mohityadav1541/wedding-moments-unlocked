@@ -17,6 +17,10 @@ const photoSchema = new mongoose.Schema({
     faceDescriptors: {
         type: [[Number]], // Array of 128-float arrays (one per face)
         default: []
+    },
+    aiProcessed: {
+        type: Boolean,
+        default: false
     }
 }, {
     timestamps: true,
