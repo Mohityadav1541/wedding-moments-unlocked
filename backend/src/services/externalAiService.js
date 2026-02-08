@@ -118,8 +118,16 @@ export const getAllFaceDescriptors = async (imageInput, retries = 15) => {
 
                         // SMART ADJUSTMENT:
                         // - Selfies (temp_search) -> w_800 (Close ups, usually single face, save RAM)
-                        // - Event Photos -> w_1600 (Group shots, need high res for small faces)
-                        const width = imageInput.includes('/temp_search/') ? 'w_800' : 'w_1600';
+                        // - Event Photos -> w_1024 (Reduced from 1600 to prevent OOM on Render Free Tier)
+                        // - Retry Fallback -> w_800 (If 1024 fails)
+                        let width = imageInput.includes('/temp_search/') ? 'w_800' : 'w_1024';
+
+                        // FALLBACK LOGIC: If we are retrying (i > 0) and validation failed or error occurred, 
+                        // try to downgrade resolution to ensure it processes.
+                        if (i > 0) {
+                            console.log(`[AI Service] Retry ${i}: Downgrading resolution to w_800`);
+                            width = 'w_800';
+                        }
 
                         optimizedUrl = `${parts[0]}/upload/${width},c_limit,q_auto/${parts[1]}`;
                     }
@@ -143,9 +151,12 @@ export const getAllFaceDescriptors = async (imageInput, retries = 15) => {
                 return [];
             }
         } catch (error) {
-            console.warn(`[AI Service] Attempt ${i + 1} failed (503/Error). Retrying in 4s...`);
+            // Exponential Backoff: 2s, 4s, 8s, 16s...
+            const waitTime = 2000 * Math.pow(2, i);
+            console.warn(`[AI Service] Attempt ${i + 1} failed (503/Error). Retrying in ${waitTime / 1000}s...`);
+
             if (i === retries - 1) return [];
-            await delay(4000); // Wait 4s between retries (Total ~60s patience)
+            await delay(waitTime);
         }
     }
     return [];
