@@ -169,10 +169,12 @@ export const searchPhotos = async (req, res) => {
         }
 
         // 2. Fetch all photos for this event that HAVE descriptors
+        // Optimizing query: Use indexed fields 'event' and 'aiProcessed'
+        // optimization: select only needed fields and use lean() for performance
         const eventPhotos = await Photo.find({
             event: eventId,
-            $expr: { $gt: [{ $size: "$faceDescriptors" }, 0] }
-        });
+            aiProcessed: true
+        }).select('url faceDescriptors').lean();
 
         // Populate User to get the Studio Name
         const event = await Event.findById(eventId).populate('user');

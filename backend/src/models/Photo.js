@@ -5,6 +5,7 @@ const photoSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         required: true,
         ref: 'Event',
+        index: true
     },
     url: {
         type: String,
@@ -20,7 +21,8 @@ const photoSchema = new mongoose.Schema({
     },
     aiProcessed: {
         type: Boolean,
-        default: false
+        default: false,
+        index: true
     }
 }, {
     timestamps: true,
