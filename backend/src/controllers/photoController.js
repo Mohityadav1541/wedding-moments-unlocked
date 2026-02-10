@@ -14,7 +14,8 @@ export const getPhotosByEvent = async (req, res) => {
         // Sort by newest first and exclude heavy descriptors
         const photos = await Photo.find({ event: req.params.eventId })
             .select('-faceDescriptors') // EXCLUDE heavy AI data
-            .sort({ createdAt: -1 });
+            .sort({ createdAt: -1 })
+            .lean(); // Use lean() for read-only speed boost
         console.log(`[Photos] Found ${photos.length} photos.`);
         res.json(photos);
     } catch (error) {
