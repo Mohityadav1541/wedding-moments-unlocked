@@ -242,54 +242,24 @@ export const searchPhotos = async (req, res) => {
 
         console.log(`[Search] Processed ${photosProcessed} photos. Matches found: ${matches.length}, Returning: ${limitedMatches.length}`);
 
-        // 4. Transform matches for display (Add Smart Watermark logic)
+        // 4. Transform matches for display with LIGHTWEIGHT URLs
         const results = limitedMatches.map(({ photo, maxSimilarity }) => {
-            // Base Transformation: Always resize to 1080px width (High Quality Mobile)
-            let transformation = 'w_1080,c_limit,q_auto,f_auto';
-
-            // Watermark Logic: Always apply watermark with photographer's business name
-            // Text Priority: 1. Event Custom Text (if set) -> 2. User Studio Name -> 3. User Name -> 4. Default
-            const shouldWatermark = eventFeatures.watermarkEnabled;
-
-            if (shouldWatermark) {
-                // Determine text priority:
-                // 1. Custom Event Text (ONLY if it's not the default generic text)
-                // 2. Studio Name (Sanwaliya Photo Studio)
-                // 3. User Name
-                // 4. Default
-
-                let watermarkText = eventFeatures.watermarkText;
-                const isGeneric = !watermarkText || watermarkText === 'Wedding Moments' || watermarkText === 'Wedding Moments AI';
-
-                if (isGeneric && event.user && event.user.studioName) {
-                    watermarkText = event.user.studioName;
-                } else if (isGeneric && event.user && event.user.name) {
-                    watermarkText = event.user.name;
-                }
-
-                if (!watermarkText || watermarkText === 'Wedding Moments') watermarkText = 'Wedding Moments AI';
-
-                const text = encodeURIComponent(watermarkText);
-                // SAFE SYNTAX: White Text with Black Border (Stroke)
-                // Position: 'g_south_east' (Bottom Right), with padding (x_30, y_30)
-                transformation += `/l_text:Arial_60_bold:${text},g_south_east,x_30,y_30,co_white,bo_4px_solid_black,fl_layer_apply`;
-            }
-
-            let downloadUrl = photo.url;
+            // Mobile-optimized thumbnail: small, fast, no watermark (watermark applied on download only)
+            let thumbnailUrl = photo.url;
 
             if (photo.url.includes('/upload/')) {
                 const parts = photo.url.split('/upload/');
-                downloadUrl = `${parts[0]}/upload/${transformation}/${parts[1]}`;
+                // Lightweight transformation: small size for fast loading
+                thumbnailUrl = `${parts[0]}/upload/w_400,c_limit,q_auto,f_auto/${parts[1]}`;
             }
 
-            // Calculate confidence score (Directly map similarity to %)
-            // Sim 0.5 -> 50%, Sim 1.0 -> 100%
+            // Calculate confidence score
             const confidence = Math.max(0, Math.round(maxSimilarity * 100));
 
             return {
                 _id: photo._id,
-                url: photo.url,
-                downloadUrl,
+                url: thumbnailUrl, // Small thumbnail for gallery
+                downloadUrl: photo.url, // Original URL (watermark applied client-side on download)
                 confidence: confidence
             };
         });
