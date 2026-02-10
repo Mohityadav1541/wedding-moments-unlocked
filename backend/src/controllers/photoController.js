@@ -231,10 +231,19 @@ export const searchPhotos = async (req, res) => {
         // Sort by best match (highest similarity)
         matches.sort((a, b) => b.maxSimilarity - a.maxSimilarity);
 
-        console.log(`[Search] Processed ${photosProcessed} photos. Matches found: ${matches.length}`);
+        // Limit to top 100 results to prevent massive response payloads
+        // If someone has 250+ matches, showing only the best 100 is better UX anyway
+        const MAX_RESULTS = 100;
+        const limitedMatches = matches.slice(0, MAX_RESULTS);
+
+        if (matches.length > MAX_RESULTS) {
+            console.log(`[Search] Limiting results from ${matches.length} to ${MAX_RESULTS} (top matches only)`);
+        }
+
+        console.log(`[Search] Processed ${photosProcessed} photos. Matches found: ${matches.length}, Returning: ${limitedMatches.length}`);
 
         // 4. Transform matches for display (Add Smart Watermark logic)
-        const results = matches.map(({ photo, maxSimilarity }) => {
+        const results = limitedMatches.map(({ photo, maxSimilarity }) => {
             // Base Transformation: Always resize to 1080px width (High Quality Mobile)
             let transformation = 'w_1080,c_limit,q_auto,f_auto';
 
