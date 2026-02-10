@@ -162,11 +162,21 @@ const EventPage = () => {
       setStep("results");
     } catch (error: any) {
       console.error("AI Search Failed:", error);
+
+      // Log full response for debugging
+      if (error.response) {
+        console.error("Error Response Data:", error.response.data);
+        console.error("Error Status:", error.response.status);
+      }
+
       if (error.response?.status === 500) {
         const serverMessage = error.response.data?.message;
-        toast.error(serverMessage || "Server error. Please try again in 1 minute.");
+        // Show the actual server message if available, instead of generic
+        toast.error(`Server Error: ${serverMessage || "Unknown"}`);
+      } else if (error.message && error.message.includes("timeout")) {
+        toast.error("Request timed out. Please try again with a smaller selfie.");
       } else {
-        toast.error(error.message || "Failed to find photos. Please try again.");
+        toast.error(`Error: ${error.message || "Failed to find photos."}`);
       }
     } finally {
       setIsProcessing(false);
