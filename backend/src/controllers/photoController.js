@@ -11,8 +11,10 @@ import { Readable } from 'stream';
 export const getPhotosByEvent = async (req, res) => {
     try {
         console.log(`[Photos] Fetching photos for event: ${req.params.eventId}`);
-        // Sort by newest first
-        const photos = await Photo.find({ event: req.params.eventId }).sort({ createdAt: -1 });
+        // Sort by newest first and exclude heavy descriptors
+        const photos = await Photo.find({ event: req.params.eventId })
+            .select('-faceDescriptors') // EXCLUDE heavy AI data
+            .sort({ createdAt: -1 });
         console.log(`[Photos] Found ${photos.length} photos.`);
         res.json(photos);
     } catch (error) {
