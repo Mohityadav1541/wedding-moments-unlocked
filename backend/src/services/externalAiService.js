@@ -17,7 +17,7 @@ const getClient = () => {
     }
     return axios.create({
         baseURL: API_URL,
-        timeout: 60000 // Increased timeout to 60s
+        timeout: 90000 // Increased timeout to 90s for cold starts
     });
 };
 

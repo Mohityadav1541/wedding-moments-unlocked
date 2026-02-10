@@ -114,7 +114,7 @@ async def analyze_url_endpoint(request: AnalysisRequest):
     try:
         # Download image
         # Timeout is important to prevent hanging
-        resp = requests.get(url, timeout=10)
+        resp = requests.get(url, timeout=30)
         resp.raise_for_status()
         
         file_bytes = resp.content
