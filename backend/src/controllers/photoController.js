@@ -217,7 +217,7 @@ export const searchPhotos = async (req, res) => {
 
             if (photosProcessed % 100 === 0) {
                 // Keep-alive or monitoring log
-                // console.log(`[Search] Processed ${photosProcessed}...`);
+                console.log(`[Search] - Processed ${photosProcessed} photos...`);
             }
         }
 
