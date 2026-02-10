@@ -168,27 +168,28 @@ export const searchPhotos = async (req, res) => {
             });
         }
 
-        // 2. Fetch all photos for this event that HAVE descriptors
-        // Optimizing query: Use indexed fields 'event' and 'aiProcessed'
-        // optimization: select only needed fields and use lean() for performance
-        const eventPhotos = await Photo.find({
+        // 2. Stream photos from DB to reduce memory usage
+        // Optimizing query: Use cursor to process one by one
+        const photoCursor = Photo.find({
             event: eventId,
             aiProcessed: true
-        }).select('url faceDescriptors').lean();
+        }).select('url faceDescriptors').cursor();
 
         // Populate User to get the Studio Name
         const event = await Event.findById(eventId).populate('user');
         const eventFeatures = event ? event.features : { watermarkEnabled: true, watermarkText: '' };
 
-        // 3. Match faces with Cosine Similarity
-        // Calculate best match similarity for each photo
-        const potentialMatches = eventPhotos.map(photo => {
-            let maxSimilarity = -1.0; // Start with lowest possible similarity
+        const matches = [];
+        let photosProcessed = 0;
+
+        // 3. Match faces with Cosine Similarity (Stream Processing)
+        for (let doc = await photoCursor.next(); doc != null; doc = await photoCursor.next()) {
+            photosProcessed++;
+            let maxSimilarity = -1.0;
 
             // Check all faces in this photo against all user selfies
-            if (photo.faceDescriptors) {
-                for (const dbDesc of photo.faceDescriptors) {
-                    // NEW: Validate DB Descriptor before using it (Fix for "All Match" bug)
+            if (doc.faceDescriptors) {
+                for (const dbDesc of doc.faceDescriptors) {
                     if (!isValidDescriptor(dbDesc)) continue;
 
                     for (const userDesc of userDescriptors) {
@@ -199,26 +200,23 @@ export const searchPhotos = async (req, res) => {
                     }
                 }
             }
-            return { photo, maxSimilarity };
-        });
 
-        // Filter by threshold
-        // Using centralized MATCH_THRESHOLD from externalAiService (0.45 for Emergency Mode)
-        const matches = potentialMatches.filter(item => {
-            if (item.maxSimilarity > MATCH_THRESHOLD) {
-                return true;
+            // Filter by threshold
+            if (maxSimilarity > MATCH_THRESHOLD) {
+                // LIGHTWEIGHT OBJECT: Discard descriptors immediately
+                matches.push({
+                    photo: { _id: doc._id, url: doc.url },
+                    maxSimilarity
+                });
+            } else if (maxSimilarity > 0.4) {
+                // console.log(`[Search] Rejected match: Sim ${maxSimilarity.toFixed(4)} < Threshold ${MATCH_THRESHOLD}`);
             }
-            // Optional: Log rejected near-matches for debugging
-            if (item.maxSimilarity > 0.4) {
-                console.log(`[Search] Rejected match: Sim ${item.maxSimilarity.toFixed(4)} < Threshold ${MATCH_THRESHOLD}`);
-            }
-            return false;
-        });
+        }
 
         // Sort by best match (highest similarity)
         matches.sort((a, b) => b.maxSimilarity - a.maxSimilarity);
 
-        console.log(`[Search] Matches found: ${matches.length}`);
+        console.log(`[Search] Processed ${photosProcessed} photos. Matches found: ${matches.length}`);
 
         // 4. Transform matches for display (Add Smart Watermark logic)
         const results = matches.map(({ photo, maxSimilarity }) => {
