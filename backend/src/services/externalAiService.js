@@ -119,9 +119,9 @@ export const getAllFaceDescriptors = async (imageInput, retries = 3) => {
                         const parts = imageInput.split('/upload/');
 
                         // SMART ADJUSTMENT:
-                        // - Selfies: w_800 (Fast)
-                        // - Event Photos: w_1280 (High Quality for 2GB Server)
-                        let width = imageInput.includes('/temp_search/') ? 'w_800' : 'w_1280';
+                        // - Selfies: w_600 (Fastest, sufficient for face detection)
+                        // - Event Photos: w_1000 (Faster than 1280, still good accuracy)
+                        let width = imageInput.includes('/temp_search/') ? 'w_600' : 'w_1000';
 
                         optimizedUrl = `${parts[0]}/upload/${width},c_limit,q_auto/${parts[1]}`;
                     }

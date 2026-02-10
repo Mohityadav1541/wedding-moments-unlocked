@@ -41,7 +41,13 @@ async def startup_event():
         mongo_client = MongoClient(MONGO_URI)
         db = mongo_client[DB_NAME]
         embeddings_collection = db[COLLECTION_NAME]
+        embeddings_collection = db[COLLECTION_NAME]
         print("✅ Connected to MongoDB!")
+
+    # Pre-load model on startup (Standard Plan Optimization)
+    print("⏳ Pre-loading InsightFace model...")
+    get_model()
+
 
 @app.on_event("shutdown")
 def shutdown_event():

@@ -22,6 +22,7 @@ import userRoutes from './src/routes/userRoutes.js';
 import landingContentRoutes from './src/routes/landingContentRoutes.js';
 import transactionRoutes from './src/routes/transactionRoutes.js';
 import unlockRoutes from './src/routes/unlockRoutes.js';
+import startKeepAlive from './src/services/aiKeepAlive.js';
 
 dotenv.config();
 
@@ -108,25 +109,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
         console.log(`Server started on port ${port}`);
 
         // --- AI SERVICE KEEP-ALIVE ---
-        // Pings the AI service every 5 minutes to prevent cold starts
-        if (process.env.HUGGING_FACE_API_URL) {
-            console.log("Starting AI Service Keep-Alive...");
-            setInterval(async () => {
-                try {
-                    // Using dynamic import for fetch if needed or just use built-in fetch in Node 18+
-                    // Since we have axios imported in other files, let's use a simple fetch here to keep it light
-                    // or just log it. 
-                    // Actually, we need to make a real request.
-                    const aiUrl = process.env.HUGGING_FACE_API_URL;
-                    // We target the root / to just wake it up
-                    const res = await fetch(aiUrl);
-                    console.log(`[Keep-Alive] Pinger AI Service: ${res.status}`);
-                } catch (err) {
-                    // Ignore errors, we just want to wake it up
-                    // console.error(`[Keep-Alive] Ping failed: ${err.message}`);
-                }
-            }, 5 * 60 * 1000); // 5 Minutes
-        }
+        startKeepAlive();
     });
 }
 
