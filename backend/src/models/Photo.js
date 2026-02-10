@@ -28,6 +28,9 @@ const photoSchema = new mongoose.Schema({
     timestamps: true,
 });
 
+// Add compound text index for efficient querying
+photoSchema.index({ event: 1, aiProcessed: 1 });
+
 const Photo = mongoose.model('Photo', photoSchema);
 
 export default Photo;

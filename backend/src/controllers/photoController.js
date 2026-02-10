@@ -168,12 +168,15 @@ export const searchPhotos = async (req, res) => {
             });
         }
 
-        // 2. Stream photos from DB to reduce memory usage
+        // 2. Stream photos from DB to reduce memory usage (LEAN for speed)
         // Optimizing query: Use cursor to process one by one
         const photoCursor = Photo.find({
             event: eventId,
             aiProcessed: true
-        }).select('url faceDescriptors').cursor();
+        })
+            .select('url faceDescriptors')
+            .lean()
+            .cursor({ batchSize: 100 }); // Process in chunks of 100 to keep connection alive
 
         // Populate User to get the Studio Name
         const event = await Event.findById(eventId).populate('user');
@@ -210,6 +213,11 @@ export const searchPhotos = async (req, res) => {
                 });
             } else if (maxSimilarity > 0.4) {
                 // console.log(`[Search] Rejected match: Sim ${maxSimilarity.toFixed(4)} < Threshold ${MATCH_THRESHOLD}`);
+            }
+
+            if (photosProcessed % 100 === 0) {
+                // Keep-alive or monitoring log
+                // console.log(`[Search] Processed ${photosProcessed}...`);
             }
         }
 
