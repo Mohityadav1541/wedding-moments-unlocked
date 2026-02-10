@@ -5,7 +5,7 @@ console.log("Current API URL:", apiUrl); // Debug Log
 
 const api = axios.create({
     baseURL: apiUrl,
-    timeout: 120000, // 120s timeout for slower network/large files
+    timeout: 300000, // 300s (5 min) limit for slow networks/large uploads
 });
 
 // Add interceptor to include token in headers if it exists
