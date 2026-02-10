@@ -231,9 +231,9 @@ export const searchPhotos = async (req, res) => {
         // Sort by best match (highest similarity)
         matches.sort((a, b) => b.maxSimilarity - a.maxSimilarity);
 
-        // Limit to top 100 results to prevent massive response payloads
-        // If someone has 250+ matches, showing only the best 100 is better UX anyway
-        const MAX_RESULTS = 100;
+        // Limit to top 50 results to prevent massive response payloads and slow mobile loading
+        // If someone has 250+ matches, showing only the best 50 is better UX anyway
+        const MAX_RESULTS = 50;
         const limitedMatches = matches.slice(0, MAX_RESULTS);
 
         if (matches.length > MAX_RESULTS) {
