@@ -289,7 +289,19 @@ export const searchPhotos = async (req, res) => {
 
     } catch (error) {
         console.error("Search Photos Error:", error);
-        res.status(500).json({ message: 'Server Error during face search' });
+        console.error("Error Type:", error.constructor.name);
+        console.error("Error Message:", error.message);
+        console.error("Stack Trace:", error.stack);
+
+        // Return more specific error message for debugging
+        const errorMessage = process.env.NODE_ENV === 'production'
+            ? 'Server Error during face search'
+            : `Search Error: ${error.message}`;
+
+        res.status(500).json({
+            message: errorMessage,
+            error: process.env.NODE_ENV === 'production' ? undefined : error.message
+        });
     }
 };
 
