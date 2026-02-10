@@ -14,6 +14,8 @@ const storage = new CloudinaryStorage({
     params: {
         folder: 'wedding-ai', // folder name in cloudinary
         allowed_formats: ['jpg', 'png', 'jpeg', 'webp'],
+        // Mobile Optimization: Resize to 1080p equivalent + compression
+        transformation: [{ width: 1920, height: 1920, crop: "limit", quality: "auto", fetch_format: "auto" }]
     },
 });
 
