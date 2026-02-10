@@ -10,9 +10,13 @@ import { Readable } from 'stream';
 // @access  Private/Admin (Public for guest matching results technically)
 export const getPhotosByEvent = async (req, res) => {
     try {
-        const photos = await Photo.find({ event: req.params.eventId });
+        console.log(`[Photos] Fetching photos for event: ${req.params.eventId}`);
+        // Sort by newest first
+        const photos = await Photo.find({ event: req.params.eventId }).sort({ createdAt: -1 });
+        console.log(`[Photos] Found ${photos.length} photos.`);
         res.json(photos);
     } catch (error) {
+        console.error("[Photos] Error fetching event photos:", error);
         res.status(500).json({ message: 'Server Error' });
     }
 };
