@@ -19,7 +19,14 @@ const startKeepAlive = () => {
         try {
             console.log(`[Keep-Alive] Pinging AI Service: ${AI_SERVICE_URL}`);
             const start = Date.now();
-            await axios.get(AI_SERVICE_URL, { timeout: 10000 });
+            
+            const config = { timeout: 10000 };
+            if (process.env.HF_TOKEN) {
+                config.headers = { 'Authorization': `Bearer ${process.env.HF_TOKEN}` };
+            }
+
+            await axios.get(AI_SERVICE_URL, config);
+            
             const duration = Date.now() - start;
             console.log(`[Keep-Alive] Success! Response time: ${duration}ms`);
         } catch (error) {

@@ -10,8 +10,13 @@ if (!url) {
     process.exit(1);
 }
 
+const config = {};
+if (process.env.HF_TOKEN) {
+    config.headers = { 'Authorization': `Bearer ${process.env.HF_TOKEN}` };
+}
+
 try {
-    const res = await axios.get(url);
+    const res = await axios.get(url, config);
     console.log(`Status: ${res.status}`);
     console.log(`Data:`, res.data);
     console.log("✅ AI Service is reachable!");

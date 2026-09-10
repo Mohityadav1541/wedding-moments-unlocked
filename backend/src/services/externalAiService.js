@@ -18,9 +18,16 @@ const getClient = () => {
         console.warn("[AI Service] HUGGING_FACE_API_URL is not set in .env");
         return null;
     }
+    
+    const headers = {};
+    if (process.env.HF_TOKEN) {
+        headers['Authorization'] = `Bearer ${process.env.HF_TOKEN}`;
+    }
+
     return axios.create({
         baseURL: API_URL,
-        timeout: 90000 // Increased timeout to 90s for cold starts
+        timeout: 90000, // Increased timeout to 90s for cold starts
+        headers
     });
 };
 
