@@ -3,7 +3,9 @@ title: Wedding Moments AI Face Recognition
 emoji: 📸
 colorFrom: pink
 colorTo: indigo
-sdk: docker
+sdk: gradio
+sdk_version: 4.19.2
+app_file: app.py
 hardware: cpu-basic
 pinned: false
 license: mit
