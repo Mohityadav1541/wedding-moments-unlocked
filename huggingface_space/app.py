@@ -56,10 +56,5 @@ demo = gr.Interface(
     title="Wedding Moments AI Face Recognition"
 )
 
-import uvicorn
-
 # Mount FastAPI app and launch demo
 app = gr.mount_gradio_app(app, demo, path="/")
-
-if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=7860)
